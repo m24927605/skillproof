@@ -43,6 +43,25 @@ const SIGNAL_RULES: SignalRule[] = [
   { skill: "Collaboration", match: (ev) => ev.type === "pull_request", confidence: 0.70 },
 ];
 
+export function detectSkillEvidence(evidence: Evidence[]): Map<string, Evidence[]> {
+  const skillMap = new Map<string, Evidence[]>();
+
+  for (const ev of evidence) {
+    for (const rule of SIGNAL_RULES) {
+      if (rule.match(ev)) {
+        const existing = skillMap.get(rule.skill);
+        if (existing) {
+          existing.push(ev);
+        } else {
+          skillMap.set(rule.skill, [ev]);
+        }
+      }
+    }
+  }
+
+  return skillMap;
+}
+
 export function inferStaticSkills(evidence: Evidence[]): Skill[] {
   const skillMap = new Map<string, { confidence: number; evidenceIds: string[] }>();
 

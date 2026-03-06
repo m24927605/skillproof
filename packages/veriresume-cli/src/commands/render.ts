@@ -1,8 +1,8 @@
 import type { Manifest } from "../types/manifest.ts";
 import { readManifest, getManifestPath } from "../core/manifest.ts";
-import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { resolveApiKey, writeConfig, readConfig } from "../core/config.ts";
+import { normalizeFormat, exportToFormat } from "../core/export.ts";
 import { ask, askYesNo } from "../core/prompt.ts";
 import { generateResume } from "../core/llm.ts";
 import { buildVerificationBlock } from "../core/verification.ts";
@@ -57,14 +57,20 @@ async function resolveApiKeyInteractive(cwd: string): Promise<string> {
   return apiKey;
 }
 
-export async function runRender(cwd: string, locale?: string): Promise<void> {
+export async function runRender(
+  cwd: string,
+  locale?: string,
+  format?: string,
+  output?: string,
+): Promise<void> {
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
 
   if (!locale) {
     const md = renderResume(manifest);
-    const outputPath = path.join(cwd, "resume.md");
-    await writeFile(outputPath, md, "utf8");
+    const fmt = normalizeFormat(format || "md");
+    const outputPath = output || path.join(cwd, `resume.${fmt === "jpeg" ? "jpg" : fmt}`);
+    await exportToFormat(md, fmt, outputPath);
     console.log(`Resume written to ${outputPath}`);
     return;
   }
@@ -90,7 +96,8 @@ export async function runRender(cwd: string, locale?: string): Promise<void> {
   const verificationBlock = buildVerificationBlock(manifest);
   const fullResume = resumeContent + verificationBlock;
 
-  const outputPath = path.join(cwd, "resume.md");
-  await writeFile(outputPath, fullResume, "utf8");
+  const fmt = normalizeFormat(format || "md");
+  const outputPath = output || path.join(cwd, `resume.${fmt === "jpeg" ? "jpg" : fmt}`);
+  await exportToFormat(fullResume, fmt, outputPath);
   console.log(`Resume written to ${outputPath}`);
 }

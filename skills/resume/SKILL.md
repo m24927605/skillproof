@@ -20,19 +20,18 @@ description: Generate verifiable developer resumes from source code repositories
 ### resume-infer
 
 1. Ensure the CLI is built.
-2. Run static inference:
+2. Run the infer-skills command (this is interactive — it will estimate token cost and ask the user to choose Full or Sampled review mode):
    ```bash
    node packages/veriresume-cli/dist/index.js infer-skills
    ```
-3. Read the manifest at `.veriresume/resume-manifest.json`.
-4. Analyze the evidence and skills already inferred. Use your reasoning to identify additional skills not caught by static signals:
-   - Look at architecture patterns (microservices, monolith, event-driven)
-   - Look at testing practices (TDD, integration tests, e2e)
-   - Look at code quality practices (linting, formatting, CI/CD)
-   - Assign confidence scores (0.0-1.0) based on strength of evidence
-5. Update the manifest with any additional LLM-inferred skills (set `inferred_by: "llm"`).
-6. Write the updated manifest back to `.veriresume/resume-manifest.json`.
-7. Report all skills found to the user.
+   The CLI will:
+   - Detect skills from evidence and group eligible files (ownership > 50%)
+   - Estimate token usage for Full vs Sampled review
+   - Display cost estimates and prompt user to choose A (Full) or B (Sampled)
+   - Require an Anthropic API key (from env, config, or interactive prompt)
+   - Send code to Claude for quality review per skill
+   - Write quality scores as skill confidence to manifest
+3. Report all skills and their quality scores to the user.
 
 ### resume-render
 
@@ -98,10 +97,17 @@ description: Generate verifiable developer resumes from source code repositories
 
    - If `signatures` is empty, replace the `<details>` block with: `> ⚠️ Unsigned — run /resume-sign first to add cryptographic proof.`
 
-6. **Write and preview:**
+6. **Determine output format:**
+   - Ask the user: "What format should the resume be exported in? (md, pdf, png, jpeg — default: md)"
+   - If the user wants non-md format, Chrome must be installed (check with `doctor` command).
+
+7. **Write and preview:**
    - Combine the generated resume content + verification block.
-   - Write the combined output to `resume.md` in the repo root.
-   - Show the user a full preview of the generated resume.
+   - Run the render CLI command with the chosen locale and format:
+     ```bash
+     node packages/veriresume-cli/dist/index.js render <locale> --format <format>
+     ```
+   - Or, if format is `md` (default), write directly to `resume.md` and show a full preview.
 
 ### resume-sign
 
@@ -134,7 +140,27 @@ description: Generate verifiable developer resumes from source code repositories
 
 Run all procedures in sequence:
 
-1. resume-scan
+1. **Choose scan mode:**
+   - Ask the user: "How would you like to scan? (A) Current project only, (B) Multiple local projects, (C) GitHub remote repos"
+   - **A — Current project:** Run `resume-scan` as normal (scan current directory).
+   - **B — Multiple local projects:**
+     - Ask the user for the parent directory path (e.g., `~/office-project`). Default: current directory.
+     - Run `scan-multi` which will:
+       1. Discover ALL git repositories under that directory and list them all in a checkbox prompt.
+       2. User selects which repos to include.
+       3. Collect and confirm author email addresses.
+       4. Scan selected repos and merge evidence into one manifest.
+     ```bash
+     node packages/veriresume-cli/dist/index.js scan-multi --path <parent-dir>
+     ```
+   - **C — GitHub remote repos:**
+     - Run `scan-multi --github` which will:
+       1. Ask which sources to include (my repos, contributed repos, org repos).
+       2. Fetch and list all repos for user to select.
+       3. Clone, scan, and merge into one manifest.
+     ```bash
+     node packages/veriresume-cli/dist/index.js scan-multi --github
+     ```
 2. resume-infer
 3. resume-render
 4. resume-sign

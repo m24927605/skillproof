@@ -1,5 +1,9 @@
 import { execFile } from "node:child_process";
+import { access } from "node:fs/promises";
+import { constants } from "node:fs";
 import { promisify } from "node:util";
+
+import { getChromePathCandidates } from "../core/browser.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -150,6 +154,26 @@ export async function runDoctor(): Promise<void> {
   results.push(
     await checkCommand("unzip", ["-v"], "unzip", false, "brew install unzip"),
   );
+
+  // 8. Chrome (optional, for PDF/image export)
+  const chromeCandidates = getChromePathCandidates();
+  let chromeFound = false;
+  for (const c of chromeCandidates) {
+    try {
+      await access(c, constants.X_OK);
+      results.push({ label: "Chrome", status: "pass", detail: c });
+      chromeFound = true;
+      break;
+    } catch { /* try next */ }
+  }
+  if (!chromeFound) {
+    results.push({
+      label: "Chrome",
+      status: "warn",
+      detail: "not found (needed for pdf/png/jpeg export)",
+      fix: "Install Google Chrome or set CHROME_PATH",
+    });
+  }
 
   for (const result of results) {
     console.log(formatResult(result));

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import path from "node:path";
 import { Command } from "commander";
 import { runScan } from "./commands/scan.ts";
 import { runInfer } from "./commands/infer.ts";
@@ -15,7 +16,7 @@ const program = new Command();
 program
   .name("veriresume")
   .description("Generate verifiable developer resumes from source code")
-  .version("0.1.0");
+  .version("0.1.1");
 
 program
   .command("scan")
@@ -33,12 +34,14 @@ program
 
 program
   .command("render")
-  .description("Generate resume markdown from manifest")
+  .description("Generate resume from manifest (supports md, pdf, png, jpeg)")
   .argument("[locale]", "Target locale for LLM generation (e.g., zh-TW, ja, en-US)")
   .option("--locale <locale>", "Target locale (alternative to positional argument)")
-  .action(async (localeArg: string | undefined, options: { locale?: string }) => {
+  .option("--format <format>", "Output format: md, pdf, png, jpeg, jpg (default: md)")
+  .option("-o, --output <path>", "Output file path")
+  .action(async (localeArg: string | undefined, options: { locale?: string; format?: string; output?: string }) => {
     const locale = localeArg || options.locale;
-    await runRender(process.cwd(), locale);
+    await runRender(process.cwd(), locale, options.format, options.output);
   });
 
 program
@@ -74,8 +77,10 @@ program
   .command("scan-multi")
   .description("Scan multiple repositories and merge into one resume")
   .option("--github", "Scan remote GitHub repositories instead of local sub-directories")
-  .action(async (options: { github?: boolean }) => {
-    await runScanMulti(process.cwd(), !!options.github);
+  .option("--path <dir>", "Parent directory containing git repositories (default: current directory)")
+  .action(async (options: { github?: boolean; path?: string }) => {
+    const targetDir = options.path ? path.resolve(options.path) : process.cwd();
+    await runScanMulti(targetDir, !!options.github);
   });
 
 program.parse();
