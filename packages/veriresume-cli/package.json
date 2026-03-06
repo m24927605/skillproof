@@ -1,0 +1,26 @@
+{
+  "name": "veriresume-cli",
+  "version": "0.1.0",
+  "description": "Generate verifiable developer resumes from source code",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "veriresume": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@inquirer/prompts": "^8.3.0",
+    "archiver": "^7.0.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

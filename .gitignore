@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.js.map
+bundle.zip
+resume.md
+.veriresume/
+.claude/
+.DS_Store
