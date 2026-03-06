@@ -1,0 +1,15 @@
+{
+  "name": "veriresume",
+  "description": "Generate verifiable developer resumes from source code",
+  "version": "0.1.0",
+  "author": {
+    "name": "Michael Chen"
+  },
+  "license": "MIT",
+  "keywords": [
+    "resume",
+    "skills",
+    "provenance",
+    "attestation"
+  ]
+}
