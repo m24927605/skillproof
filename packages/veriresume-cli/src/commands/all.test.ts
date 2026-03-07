@@ -36,7 +36,7 @@ describe("runAll", () => {
     const { runAll } = await import("./all.ts");
 
     // runAll with current project scan mode, default md format (skip interactive)
-    await runAll(tempDir, { scanMode: "current", format: "md" });
+    await runAll(tempDir, { scanMode: "current", format: "md", skipLlm: true });
 
     // Verify manifest exists with evidence and skills
     const manifestPath = getManifestPath(tempDir);

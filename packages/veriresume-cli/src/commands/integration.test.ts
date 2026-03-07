@@ -109,7 +109,7 @@ CMD ["node", "dist/index.js"]
     await writeManifest(manifestPath, manifest);
 
     // Step 3: Render
-    await runRender(tempDir);
+    await runRender(tempDir, undefined, undefined, undefined, { yes: true });
     const resumePath = path.join(tempDir, "resume.md");
     await access(resumePath);
     const resumeContent = await readFile(resumePath, "utf8");

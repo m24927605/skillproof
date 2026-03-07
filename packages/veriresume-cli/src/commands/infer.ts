@@ -104,7 +104,22 @@ No explanation, no markdown fences, just the JSON object.`;
   return JSON.parse(cleaned) as Record<string, number>;
 }
 
-export async function runInfer(cwd: string): Promise<void> {
+function heuristicConfidence(evidenceItems: Evidence[]): number {
+  const fileCount = evidenceItems.filter((e) => e.type === "file").length;
+  const commitCount = evidenceItems.filter((e) => e.type === "commit").length;
+  const depCount = evidenceItems.filter((e) => e.type === "dependency").length;
+  const configCount = evidenceItems.filter((e) => e.type === "config").length;
+  const total = evidenceItems.length;
+
+  let score = Math.min(0.3 + total * 0.05, 0.9);
+  if (fileCount > 0) score = Math.min(score + 0.1, 0.95);
+  if (commitCount > 3) score = Math.min(score + 0.1, 0.95);
+  if (configCount > 0) score = Math.min(score + 0.05, 0.95);
+  if (depCount > 0 && fileCount === 0 && commitCount === 0) score = Math.min(score, 0.4);
+  return Math.round(score * 100) / 100;
+}
+
+export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Promise<void> {
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
 
@@ -115,38 +130,47 @@ export async function runInfer(cwd: string): Promise<void> {
     return;
   }
 
-  // 2. Resolve API key for LLM scoring (required)
-  let apiKey = await resolveApiKey(cwd);
-  if (!apiKey) {
-    console.log("Anthropic API key is required for LLM-based skill analysis.");
-    apiKey = await ask("Enter your Anthropic API key: ");
+  // 2. Score skills — LLM required unless skipLlm (tests only)
+  let skills: Skill[];
+
+  if (options?.skipLlm) {
+    skills = [...skillEvidence.entries()].map(([name, evs]) => ({
+      name,
+      confidence: heuristicConfidence(evs),
+      evidence_ids: evs.map((e) => e.id),
+      inferred_by: "static" as const,
+    }));
+  } else {
+    let apiKey = await resolveApiKey(cwd);
     if (!apiKey) {
-      console.error("Error: Anthropic API key is required. Cannot infer skills without LLM analysis.");
-      process.exitCode = 1;
-      return;
+      console.log("Anthropic API key is required for LLM-based skill analysis.");
+      apiKey = await ask("Enter your Anthropic API key: ");
+      if (!apiKey) {
+        console.error("Error: Anthropic API key is required. Cannot infer skills without LLM analysis.");
+        process.exitCode = 1;
+        return;
+      }
+      const save = await askYesNo("Save to .veriresume/config.json for future use?");
+      if (save) {
+        const config = await readConfig(cwd);
+        config.anthropic_api_key = apiKey;
+        await writeConfig(cwd, config);
+        console.log("Key saved.");
+      }
     }
-    const save = await askYesNo("Save to .veriresume/config.json for future use?");
-    if (save) {
-      const config = await readConfig(cwd);
-      config.anthropic_api_key = apiKey;
-      await writeConfig(cwd, config);
-      console.log("Key saved.");
-    }
+
+    console.log(`\nAnalyzing ${skillEvidence.size} skills with LLM...`);
+    const scores = await scoreSkillsWithLLM(apiKey, skillEvidence, manifest.evidence);
+    console.log("\nLLM Confidence Scores:");
+    console.log(JSON.stringify(scores, null, 2));
+
+    skills = [...skillEvidence.entries()].map(([name, evs]) => ({
+      name,
+      confidence: typeof scores[name] === "number" ? scores[name] : 0.5,
+      evidence_ids: evs.map((e) => e.id),
+      inferred_by: "llm" as const,
+    }));
   }
-
-  // 3. Score skills with LLM
-  console.log(`\nAnalyzing ${skillEvidence.size} skills with LLM...`);
-  const scores = await scoreSkillsWithLLM(apiKey, skillEvidence, manifest.evidence);
-
-  console.log("\nLLM Confidence Scores:");
-  console.log(JSON.stringify(scores, null, 2));
-
-  const skills: Skill[] = [...skillEvidence.entries()].map(([name, evs]) => ({
-    name,
-    confidence: typeof scores[name] === "number" ? scores[name] : 0.5,
-    evidence_ids: evs.map((e) => e.id),
-    inferred_by: "llm" as const,
-  }));
 
   // 4. Write to manifest
   manifest.skills = skills;

@@ -22,6 +22,7 @@ export async function runAll(
     locale?: string; format?: string; output?: string;
     scanMode?: ScanMode; parentDir?: string;
     repos?: string[]; emails?: string[];
+    skipLlm?: boolean;
   },
 ): Promise<void> {
   const steps = [
@@ -40,25 +41,27 @@ export async function runAll(
   };
 
   try {
-    // Pre-check: Anthropic API key is required for the entire pipeline
-    let apiKey = await resolveApiKey(cwd);
-    if (!apiKey) {
-      console.log("Anthropic API key is required for LLM-based skill analysis.");
-      apiKey = await ask("Enter your Anthropic API key: ");
+    // Pre-check: Anthropic API key (skip if skipLlm is set, e.g. in tests)
+    if (!options?.skipLlm) {
+      let apiKey = await resolveApiKey(cwd);
       if (!apiKey) {
-        console.error("Error: Anthropic API key is required. Cannot proceed without it.");
-        process.exitCode = 1;
-        return;
+        console.log("Anthropic API key is required for LLM-based skill analysis.");
+        apiKey = await ask("Enter your Anthropic API key: ");
+        if (!apiKey) {
+          console.error("Error: Anthropic API key is required. Cannot proceed without it.");
+          process.exitCode = 1;
+          return;
+        }
+        const save = await askYesNo("Save to .veriresume/config.json for future use?");
+        if (save) {
+          const config = await readConfig(cwd);
+          config.anthropic_api_key = apiKey;
+          await writeConfig(cwd, config);
+          console.log("Key saved.");
+        }
       }
-      const save = await askYesNo("Save to .veriresume/config.json for future use?");
-      if (save) {
-        const config = await readConfig(cwd);
-        config.anthropic_api_key = apiKey;
-        await writeConfig(cwd, config);
-        console.log("Key saved.");
-      }
+      console.log("Anthropic API key found. LLM analysis enabled.");
     }
-    console.log("Anthropic API key found. LLM analysis enabled.");
 
     // Step 1: Scan — choose mode
     const scanMode = options?.scanMode ?? await selectPrompt<ScanMode>(
@@ -93,30 +96,36 @@ export async function runAll(
 
     // Step 2: Infer
     step("Inferring skills");
-    await runInfer(cwd);
+    await runInfer(cwd, { skipLlm: options?.skipLlm });
 
     // Step 3: Render — interactive prompts
     let locale = options?.locale;
     let format = options?.format;
     let output = options?.output;
 
-    if (!options) {
-      locale = (await ask("Locale for resume (e.g., en-US, zh-TW — press Enter to skip): ")) || undefined;
+    if (!options?.skipLlm) {
+      if (!locale) {
+        locale = (await ask("Locale for resume (e.g., en-US, zh-TW — press Enter to skip): ")) || undefined;
+      }
 
-      format = await selectPrompt<string>(
-        "Output format",
-        [
-          { name: "md (default)", value: "md" },
-          { name: "pdf", value: "pdf" },
-          { name: "png", value: "png" },
-          { name: "jpeg", value: "jpeg" },
-        ],
-      );
+      if (!format) {
+        format = await selectPrompt<string>(
+          "Output format",
+          [
+            { name: "md (default)", value: "md" },
+            { name: "pdf", value: "pdf" },
+            { name: "png", value: "png" },
+            { name: "jpeg", value: "jpeg" },
+          ],
+        );
+      }
 
-      const ext = format === "jpeg" ? "jpg" : format;
-      const defaultOutput = path.join(cwd, `resume.${ext}`);
-      const outputAnswer = await ask(`Output path (default: ${defaultOutput}): `);
-      output = outputAnswer || defaultOutput;
+      if (!output) {
+        const ext = (format === "jpeg" ? "jpg" : format) || "md";
+        const defaultOutput = path.join(cwd, `resume.${ext}`);
+        const outputAnswer = await ask(`Output path (default: ${defaultOutput}): `);
+        output = outputAnswer || defaultOutput;
+      }
     }
 
     if (!output) {
@@ -125,7 +134,7 @@ export async function runAll(
     }
 
     step("Rendering resume");
-    await runRender(cwd, locale, format, output);
+    await runRender(cwd, locale, format, output, options?.skipLlm ? { yes: true } : undefined);
 
     // Step 4: Sign
     step("Signing manifest");
