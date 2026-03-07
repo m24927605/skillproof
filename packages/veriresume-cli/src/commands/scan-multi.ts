@@ -13,30 +13,45 @@ import type { Manifest } from "../types/manifest.ts";
 
 const execFileAsync = promisify(execFile);
 
-interface LocalRepo {
+export interface LocalRepo {
   name: string;
   path: string;
 }
 
-async function discoverLocalRepos(parentDir: string): Promise<LocalRepo[]> {
-  const entries = await readdir(parentDir);
+export async function discoverLocalRepos(parentDir: string): Promise<LocalRepo[]> {
   const repos: LocalRepo[] = [];
 
-  for (const entry of entries) {
-    const fullPath = path.join(parentDir, entry);
+  async function walk(dir: string): Promise<void> {
+    let entries: string[];
     try {
-      const s = await stat(fullPath);
-      if (!s.isDirectory()) continue;
-      const gitDir = path.join(fullPath, ".git");
-      const gitStat = await stat(gitDir);
-      if (gitStat.isDirectory()) {
-        repos.push({ name: entry, path: fullPath });
-      }
+      entries = await readdir(dir);
     } catch {
-      // not a git repo, skip
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry);
+      try {
+        const s = await stat(fullPath);
+        if (!s.isDirectory()) continue;
+        const gitDir = path.join(fullPath, ".git");
+        try {
+          const gitStat = await stat(gitDir);
+          if (gitStat.isDirectory()) {
+            repos.push({ name: entry, path: fullPath });
+            continue; // Don't recurse into git repos
+          }
+        } catch {
+          // No .git here, recurse deeper
+        }
+        await walk(fullPath);
+      } catch {
+        // skip unreadable entries
+      }
     }
   }
 
+  await walk(parentDir);
   return repos;
 }
 
@@ -46,32 +61,50 @@ async function cloneRepo(cloneUrl: string, targetDir: string): Promise<void> {
   });
 }
 
-async function runLocalMode(cwd: string): Promise<void> {
+async function runLocalMode(
+  cwd: string,
+  preSelected?: { repos?: string[]; emails?: string[] },
+): Promise<void> {
   const repos = await discoverLocalRepos(cwd);
   if (repos.length === 0) {
     console.log("No git repositories found in current directory.");
     return;
   }
 
-  const selected = await checkboxPrompt<LocalRepo>(
-    "Select repositories to scan",
-    repos.map((r) => ({ name: r.name, value: r }))
-  );
-  if (selected.length === 0) {
-    console.log("No repositories selected.");
-    return;
+  let selected: LocalRepo[];
+  if (preSelected?.repos && preSelected.repos.length > 0) {
+    const repoNames = new Set(preSelected.repos);
+    selected = repos.filter((r) => repoNames.has(r.name));
+    if (selected.length === 0) {
+      console.log("None of the specified repos were found.");
+      return;
+    }
+  } else {
+    selected = await checkboxPrompt<LocalRepo>(
+      "Select repositories to scan",
+      repos.map((r) => ({ name: r.name, value: r }))
+    );
+    if (selected.length === 0) {
+      console.log("No repositories selected.");
+      return;
+    }
   }
 
-  // Collect and confirm emails
-  const emailCandidates = await collectAllEmails(selected);
-  const confirmedEmails = await checkboxPrompt<string>(
-    "Confirm your email addresses (used for ownership calculation)",
-    emailCandidates.map((e) => ({
-      name: `${e.email} (${e.sources.join(", ")})`,
-      value: e.email,
-      checked: e.sources.some((s) => s === "git config" || s === "github"),
-    }))
-  );
+  let confirmedEmails: string[];
+  if (preSelected?.emails && preSelected.emails.length > 0) {
+    confirmedEmails = preSelected.emails;
+  } else {
+    // Collect and confirm emails
+    const emailCandidates = await collectAllEmails(selected);
+    confirmedEmails = await checkboxPrompt<string>(
+      "Confirm your email addresses (used for ownership calculation)",
+      emailCandidates.map((e) => ({
+        name: `${e.email} (${e.sources.join(", ")})`,
+        value: e.email,
+        checked: e.sources.some((s) => s === "git config" || s === "github"),
+      }))
+    );
+  }
   if (confirmedEmails.length === 0) {
     console.log("No emails confirmed. Cannot calculate ownership.");
     return;
@@ -283,10 +316,14 @@ async function runGitHubMode(cwd: string): Promise<void> {
   }
 }
 
-export async function runScanMulti(cwd: string, github: boolean): Promise<void> {
+export async function runScanMulti(
+  cwd: string,
+  github: boolean,
+  preSelected?: { repos?: string[]; emails?: string[] },
+): Promise<void> {
   if (github) {
     await runGitHubMode(cwd);
   } else {
-    await runLocalMode(cwd);
+    await runLocalMode(cwd, preSelected);
   }
 }

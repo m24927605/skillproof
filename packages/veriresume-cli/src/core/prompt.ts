@@ -1,5 +1,5 @@
 import readline from "node:readline";
-import { checkbox } from "@inquirer/prompts";
+import { checkbox, select } from "@inquirer/prompts";
 
 export function ask(question: string): Promise<string> {
   const rl = readline.createInterface({
@@ -25,4 +25,11 @@ export async function checkboxPrompt<T>(
   choices: { name: string; value: T; checked?: boolean }[]
 ): Promise<T[]> {
   return checkbox({ message, choices });
+}
+
+export async function selectPrompt<T>(
+  message: string,
+  choices: { name: string; value: T }[]
+): Promise<T> {
+  return select({ message, choices });
 }

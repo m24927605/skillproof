@@ -7,7 +7,7 @@ import {
   createFileEvidence,
   createPREvidence,
 } from "../core/evidence.ts";
-import { isSensitivePath } from "../core/security.ts";
+import { isSensitivePath, containsSecrets } from "../core/security.ts";
 import {
   getGitLog,
   getGitUser,
@@ -44,7 +44,7 @@ export function buildEvidence(input: ScanInput): Evidence[] {
   }
 
   for (const file of input.files) {
-    if (!isSensitivePath(file.path)) {
+    if (!isSensitivePath(file.path) && !containsSecrets(file.content)) {
       evidence.push(createFileEvidence(file.path, file.content, file.ownership));
     }
   }
@@ -77,6 +77,28 @@ const CONFIG_PATTERNS = [
   /serverless\.(yml|yaml|json)$/,
 ];
 
+export function parseCargoDeps(content: string): { name: string }[] {
+  const deps: { name: string }[] = [];
+  let inDepSection = false;
+
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("[")) {
+      inDepSection = trimmed === "[dependencies]" || trimmed === "[dev-dependencies]"
+        || trimmed === "[build-dependencies]";
+      continue;
+    }
+    if (!inDepSection) continue;
+    if (trimmed === "" || trimmed.startsWith("#")) continue;
+    const match = trimmed.match(/^([\w][\w-]*)\s*=/);
+    if (match) {
+      deps.push({ name: match[1] });
+    }
+  }
+
+  return deps;
+}
+
 const DEPENDENCY_FILES: Record<string, (content: string) => { name: string }[]> = {
   "package.json": (content) => {
     try {
@@ -96,10 +118,7 @@ const DEPENDENCY_FILES: Record<string, (content: string) => { name: string }[]> 
     const matches = content.matchAll(/^\s+(\S+)\s/gm);
     return [...matches].map((m) => ({ name: m[1].split("/").pop()! }));
   },
-  "Cargo.toml": (content) => {
-    const matches = content.matchAll(/^(\w[\w-]*)\s*=/gm);
-    return [...matches].map((m) => ({ name: m[1] }));
-  },
+  "Cargo.toml": (content) => parseCargoDeps(content),
 };
 
 async function batchBlame(

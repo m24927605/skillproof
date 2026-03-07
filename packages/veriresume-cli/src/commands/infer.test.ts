@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { writeManifest, readManifest, createEmptyManifest } from "../core/manifest.ts";
-import { runInferStatic } from "./infer.ts";
+import { detectSkillEvidence } from "../core/skills.ts";
 
 describe("infer", () => {
   let tempDir: string;
@@ -19,7 +19,7 @@ describe("infer", () => {
     await rm(tempDir, { recursive: true });
   });
 
-  it("infers skills from evidence in manifest and writes them back", async () => {
+  it("detects skills from evidence in manifest", async () => {
     const manifest = createEmptyManifest({
       repoUrl: null,
       headCommit: "abc",
@@ -46,11 +46,10 @@ describe("infer", () => {
     ];
     await writeManifest(manifestPath, manifest);
 
-    await runInferStatic(manifestPath);
-
-    const updated = await readManifest(manifestPath);
-    assert.ok(updated.skills.length >= 2);
-    assert.ok(updated.skills.some((s) => s.name === "Docker"));
-    assert.ok(updated.skills.some((s) => s.name === "Redis"));
+    const saved = await readManifest(manifestPath);
+    const skillEvidence = detectSkillEvidence(saved.evidence);
+    assert.ok(skillEvidence.size >= 2);
+    assert.ok(skillEvidence.has("Docker"));
+    assert.ok(skillEvidence.has("Redis"));
   });
 });

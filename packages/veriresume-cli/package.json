@@ -1,11 +1,11 @@
 {
   "name": "veriresume-cli",
-  "version": "0.1.1",
+  "version": "0.1.23",
   "description": "Generate verifiable developer resumes from source code",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "veriresume": "dist/index.js"
+    "veriresume": "src/index.ts"
   },
   "scripts": {
     "build": "tsc",

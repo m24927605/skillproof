@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildEvidence } from "./scan.ts";
+import { buildEvidence, parseCargoDeps } from "./scan.ts";
 
 describe("scan", () => {
   describe("buildEvidence", () => {
@@ -84,6 +84,54 @@ describe("scan", () => {
 
       const fileEvidence = result.filter((e) => e.type === "file");
       assert.equal(fileEvidence.length, 1);
+    });
+
+    it("excludes files containing secrets from evidence", () => {
+      const result = buildEvidence({
+        commits: [],
+        files: [
+          { path: "src/index.ts", content: "const x = 1;", ownership: 0.8 },
+          { path: "src/config.ts", content: "const key = 'AKIAIOSFODNN7EXAMPLE';", ownership: 0.9 },
+        ],
+        dependencies: [],
+        configFiles: [],
+        pullRequests: [],
+      });
+
+      const fileEvidence = result.filter((e) => e.type === "file");
+      assert.equal(fileEvidence.length, 1);
+      assert.equal(fileEvidence[0].source, "src/index.ts");
+    });
+  });
+
+  describe("parseCargoDeps", () => {
+    it("only parses keys under dependency sections", () => {
+      const content = [
+        "[package]",
+        'name = "my-app"',
+        'version = "0.1.0"',
+        'edition = "2021"',
+        "",
+        "[dependencies]",
+        'serde = "1.0"',
+        'tokio = { version = "1", features = ["full"] }',
+        "",
+        "[dev-dependencies]",
+        'criterion = "0.5"',
+        "",
+        "[profile.release]",
+        "opt-level = 3",
+      ].join("\n");
+
+      const deps = parseCargoDeps(content);
+      const names = deps.map((d) => d.name);
+      assert.ok(names.includes("serde"));
+      assert.ok(names.includes("tokio"));
+      assert.ok(names.includes("criterion"));
+      assert.ok(!names.includes("name"));
+      assert.ok(!names.includes("version"));
+      assert.ok(!names.includes("edition"));
+      assert.ok(!names.includes("opt-level"));
     });
   });
 });

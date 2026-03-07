@@ -63,4 +63,33 @@ describe("verification", () => {
     const block = buildVerificationBlock(manifest);
     assert.ok(block.includes("**Repository:** local"));
   });
+
+  it("includes author git email in verification block", () => {
+    const manifest = makeManifest();
+    const block = buildVerificationBlock(manifest);
+    assert.ok(block.includes("**Git Email:** test@test.com"));
+  });
+
+  it("includes multiple git emails when author.emails is set", () => {
+    const manifest = makeManifest({
+      author: { name: "Test", email: "test@test.com", emails: ["test@test.com", "work@company.com"] },
+    });
+    const block = buildVerificationBlock(manifest);
+    assert.ok(block.includes("**Git Email(s):** test@test.com, work@company.com"));
+  });
+
+  it("shows all repos when manifest.repos exists (multi-repo scan)", () => {
+    const manifest = makeManifest({
+      repos: [
+        { url: "https://github.com/test/repo-a", head_commit: "aaa1111", name: "repo-a" },
+        { url: "https://github.com/test/repo-b", head_commit: "bbb2222", name: "repo-b" },
+        { url: "https://github.com/test/repo-c", head_commit: "ccc3333", name: "repo-c" },
+      ],
+    });
+    const block = buildVerificationBlock(manifest);
+    assert.ok(block.includes("**Repositories:** 3"));
+    assert.ok(block.includes("repo-a"));
+    assert.ok(block.includes("repo-b"));
+    assert.ok(block.includes("repo-c"));
+  });
 });

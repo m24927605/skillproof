@@ -55,5 +55,59 @@ describe("verify", () => {
     assert.equal(result.valid, true);
     assert.equal(result.signatures.length, 1);
     assert.equal(result.signatures[0].valid, true);
+    assert.equal(result.resumeTampered, false);
+  });
+
+  it("detects tampered resume.md", async () => {
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+
+    const keysDir = path.join(tempDir, ".veriresume", "keys");
+    const keys = await generateKeyPair(keysDir);
+
+    const manifestForSign = { ...manifest, signatures: [] as Signature[] };
+    const content = canonicalJson(manifestForSign);
+    const sig = signManifest(content, keys.privateKey);
+    manifest.signatures = [{
+      signer: "candidate",
+      public_key: Buffer.from(keys.publicKey).toString("base64"),
+      signature: sig,
+      timestamp: new Date().toISOString(),
+      algorithm: "Ed25519",
+    }];
+
+    const manifestPath = path.join(tempDir, ".veriresume", "resume-manifest.json");
+    await writeManifest(manifestPath, manifest);
+    await writeFile(path.join(tempDir, "resume.md"), "# Original\n", "utf8");
+
+    await runPack(tempDir);
+
+    // Tamper with resume.md inside the bundle
+    const bundlePath = path.join(tempDir, "bundle.zip");
+    const tamperDir = await mkdtemp(path.join(tmpdir(), "veriresume-tamper-"));
+
+    const { execFile: ef } = await import("node:child_process");
+    const { promisify: p } = await import("node:util");
+    const execFileAsync = p(ef);
+
+    await execFileAsync("unzip", ["-o", bundlePath, "-d", tamperDir]);
+    await writeFile(path.join(tamperDir, "resume.md"), "# TAMPERED\n", "utf8");
+
+    // Re-zip
+    await rm(bundlePath);
+    await execFileAsync("zip", ["-j", bundlePath,
+      path.join(tamperDir, "resume.md"),
+      path.join(tamperDir, "resume-manifest.json"),
+      path.join(tamperDir, "verification.json"),
+    ]);
+    await rm(tamperDir, { recursive: true });
+
+    const result = await verifyBundle(bundlePath);
+    assert.equal(result.valid, false);
+    assert.equal(result.resumeTampered, true);
   });
 });

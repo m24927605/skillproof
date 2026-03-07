@@ -6,12 +6,12 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { runScan } from "./scan.ts";
-import { runInferStatic } from "./infer.ts";
+import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
+import { detectSkillEvidence } from "../core/skills.ts";
 import { runRender } from "./render.ts";
 import { runSign } from "./sign.ts";
 import { runPack } from "./pack.ts";
 import { verifyBundle } from "./verify.ts";
-import { getManifestPath } from "../core/manifest.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -93,13 +93,20 @@ CMD ["node", "dist/index.js"]
       assert.ok(fe.ownership >= 0 && fe.ownership <= 1, "ownership should be 0-1");
     }
 
-    // Step 2: Infer
-    await runInferStatic(manifestPath);
-    const manifestAfterInfer = JSON.parse(await readFile(manifestPath, "utf8"));
-    assert.ok(manifestAfterInfer.skills.length > 0, "should have inferred skills");
-    const skillNames = manifestAfterInfer.skills.map((s: { name: string }) => s.name);
-    assert.ok(skillNames.includes("Docker"), "should infer Docker skill");
-    assert.ok(skillNames.includes("Redis"), "should infer Redis skill");
+    // Step 2: Detect skills (LLM review requires API key, so test detection only)
+    const manifest = await readManifest(manifestPath);
+    const skillEvidence = detectSkillEvidence(manifest.evidence);
+    assert.ok(skillEvidence.size > 0, "should detect skills from evidence");
+    assert.ok(skillEvidence.has("Docker"), "should detect Docker skill");
+    assert.ok(skillEvidence.has("Redis"), "should detect Redis skill");
+    // Write skills to manifest so subsequent steps can use them
+    manifest.skills = [...skillEvidence.keys()].map((name) => ({
+      name,
+      confidence: 0.8,
+      evidence_ids: (skillEvidence.get(name) || []).map((e) => e.id),
+      inferred_by: "llm" as const,
+    }));
+    await writeManifest(manifestPath, manifest);
 
     // Step 3: Render
     await runRender(tempDir);

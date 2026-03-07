@@ -156,5 +156,41 @@ describe("git", () => {
       assert.equal(prs[0].mergedAt, "2025-06-15T10:00:00Z");
       assert.equal(prs[0].additions, 150);
     });
+
+    it("filters by author login when provided", () => {
+      const json = JSON.stringify([
+        { number: 1, title: "my PR", merged_at: "2025-06-15T10:00:00Z", html_url: "https://github.com/o/r/pull/1", additions: 10, deletions: 5, user: { login: "john" } },
+        { number: 2, title: "someone else", merged_at: "2025-06-16T10:00:00Z", html_url: "https://github.com/o/r/pull/2", additions: 20, deletions: 3, user: { login: "jane" } },
+      ]);
+      const prs = parseGitHubPRs(json, "john");
+      assert.equal(prs.length, 1);
+      assert.equal(prs[0].number, 1);
+    });
+
+    it("returns all merged PRs when no author filter", () => {
+      const json = JSON.stringify([
+        { number: 1, title: "a", merged_at: "2025-06-15T10:00:00Z", html_url: "url1", additions: 10, deletions: 5, user: { login: "john" } },
+        { number: 2, title: "b", merged_at: "2025-06-16T10:00:00Z", html_url: "url2", additions: 20, deletions: 3, user: { login: "jane" } },
+      ]);
+      const prs = parseGitHubPRs(json);
+      assert.equal(prs.length, 2);
+    });
+  });
+
+  describe("parseRepoFromRemote – dotted names", () => {
+    it("parses repo name with dots (HTTPS)", () => {
+      const result = parseRepoFromRemote("https://github.com/owner/my.repo.git");
+      assert.deepEqual(result, { owner: "owner", repo: "my.repo" });
+    });
+
+    it("parses repo name with dots (SSH)", () => {
+      const result = parseRepoFromRemote("git@github.com:owner/my.repo.git");
+      assert.deepEqual(result, { owner: "owner", repo: "my.repo" });
+    });
+
+    it("parses HTTPS URL without .git suffix", () => {
+      const result = parseRepoFromRemote("https://github.com/owner/my.repo");
+      assert.deepEqual(result, { owner: "owner", repo: "my.repo" });
+    });
   });
 });

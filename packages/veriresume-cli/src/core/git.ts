@@ -121,10 +121,10 @@ export interface RepoId {
 }
 
 export function parseRepoFromRemote(remoteUrl: string): RepoId | null {
-  const httpsMatch = remoteUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
+  const httpsMatch = remoteUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/);
   if (httpsMatch) return { owner: httpsMatch[1], repo: httpsMatch[2] };
 
-  const sshMatch = remoteUrl.match(/github\.com:([^/]+)\/([^/.]+)/);
+  const sshMatch = remoteUrl.match(/github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/);
   if (sshMatch) return { owner: sshMatch[1], repo: sshMatch[2] };
 
   return null;
@@ -139,7 +139,7 @@ export interface PullRequest {
   deletions: number;
 }
 
-export function parseGitHubPRs(json: string): PullRequest[] {
+export function parseGitHubPRs(json: string, authorLogin?: string): PullRequest[] {
   const raw = JSON.parse(json) as Array<{
     number: number;
     title: string;
@@ -147,10 +147,12 @@ export function parseGitHubPRs(json: string): PullRequest[] {
     html_url: string;
     additions: number;
     deletions: number;
+    user: { login: string };
   }>;
 
   return raw
     .filter((pr) => pr.merged_at !== null)
+    .filter((pr) => !authorLogin || pr.user.login === authorLogin)
     .map((pr) => ({
       number: pr.number,
       title: pr.title,
@@ -179,10 +181,7 @@ export async function getAuthorPRs(
       "api",
       `repos/${repoId.owner}/${repoId.repo}/pulls?state=closed&per_page=100`,
     ]);
-    const allPRs = parseGitHubPRs(stdout);
-    // Note: gh api returns all closed PRs, filter by author would need additional logic
-    // For now return all merged PRs (the scan command filters by repo which is already scoped)
-    return allPRs;
+    return parseGitHubPRs(stdout, authorLogin);
   } catch {
     return [];
   }

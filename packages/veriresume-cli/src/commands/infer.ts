@@ -1,37 +1,6 @@
 import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
-import { inferStaticSkills, detectSkillEvidence } from "../core/skills.ts";
-import {
-  estimateReviewTokens,
-  buildEstimateDisplay,
-  truncateFileContent,
-  type FileForReview,
-} from "../core/token-estimate.ts";
-import { reviewSkill, type ReviewResult } from "../core/code-review.ts";
-import { resolveApiKey } from "../core/config.ts";
-import { ask } from "../core/prompt.ts";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import type { Claim } from "../types/manifest.ts";
-
-export async function runInferStatic(manifestPath: string): Promise<void> {
-  const manifest = await readManifest(manifestPath);
-  const skills = inferStaticSkills(manifest.evidence);
-
-  manifest.skills = skills;
-  manifest.claims = skills.map((s, i) => {
-    const category = inferCategory(s.name);
-    return {
-      id: `CLAIM-${i + 1}`,
-      category,
-      skill: s.name,
-      confidence: s.confidence,
-      evidence_ids: s.evidence_ids,
-    } satisfies Claim;
-  });
-
-  await writeManifest(manifestPath, manifest);
-  console.log(`Inferred ${skills.length} skills from static signals.`);
-}
+import { detectSkillEvidence } from "../core/skills.ts";
+import type { Claim, Skill } from "../types/manifest.ts";
 
 function inferCategory(skillName: string): Claim["category"] {
   const languages = ["TypeScript", "JavaScript", "Python", "Go", "Rust", "Java"];
@@ -57,101 +26,27 @@ export async function runInfer(cwd: string): Promise<void> {
     return;
   }
 
-  // 2. Build file-for-review map: read content, filter by ownership > 0.5
-  const filesBySkill = new Map<string, FileForReview[]>();
+  // 2. List eligible files per skill (ownership > 50%)
+  const eligibleFiles = new Map<string, { path: string; ownership: number }[]>();
   for (const [skill, evidences] of skillEvidence) {
-    const files: FileForReview[] = [];
-    for (const ev of evidences) {
-      if (ev.type !== "file") continue;
-      if (ev.ownership <= 0.5) continue;
-      try {
-        const content = await readFile(path.join(cwd, ev.source), "utf8");
-        files.push({ path: ev.source, content, ownership: ev.ownership, skill });
-      } catch {
-        // skip unreadable files
-      }
-    }
+    const files = evidences
+      .filter((ev) => ev.type === "file" && ev.ownership > 0.5)
+      .map((ev) => ({ path: ev.source, ownership: ev.ownership }));
     if (files.length > 0) {
-      filesBySkill.set(skill, files);
+      eligibleFiles.set(skill, files);
     }
   }
 
-  if (filesBySkill.size === 0) {
-    console.log("No eligible files found for code review (need file evidence with ownership > 50%).");
-    // Fall back to static inference
-    await runInferStatic(manifestPath);
-    return;
-  }
-
-  // 3. Estimate tokens and display
-  const estimate = estimateReviewTokens(filesBySkill);
-  console.log(buildEstimateDisplay(estimate));
-
-  // 4. User chooses mode
-  const mode = await ask("Select review mode (A/B): ");
-  const isFullReview = mode.trim().toUpperCase() === "A";
-
-  // 5. Resolve API key
-  let apiKey = await resolveApiKey(cwd);
-  if (!apiKey) {
-    console.log("No API key found.");
-    apiKey = await ask("Enter your Anthropic API key: ");
-    if (!apiKey) {
-      throw new Error("API key is required for code review.");
-    }
-  }
-
-  // 6. Prepare files per skill based on mode
-  const SAMPLED_FILES_PER_SKILL = 3;
-  const MAX_LINES = 150;
-  const reviewResults: ReviewResult[] = [];
-  const skills = [...filesBySkill.keys()];
-
-  for (let i = 0; i < skills.length; i++) {
-    const skill = skills[i];
-    let files = filesBySkill.get(skill)!;
-
-    // Apply sampling if mode B
-    if (!isFullReview) {
-      files = [...files]
-        .sort((a, b) => b.content.length - a.content.length)
-        .slice(0, SAMPLED_FILES_PER_SKILL);
-    }
-
-    // Truncate file contents
-    files = files.map((f) => ({
-      ...f,
-      content: truncateFileContent(f.content, MAX_LINES),
-    }));
-
-    console.log(`Reviewing ${i + 1}/${skills.length}: ${skill} (${files.length} files)`);
-
-    try {
-      const result = await reviewSkill(apiKey, skill, files);
-      reviewResults.push(result);
-      console.log(`  Score: ${result.quality_score} — ${result.reasoning.slice(0, 80)}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`  Failed: ${msg}`);
-    }
-  }
-
-  if (reviewResults.length === 0) {
-    console.log("All reviews failed. Falling back to static inference.");
-    await runInferStatic(manifestPath);
-    return;
-  }
-
-  // 7. Map results to skills
-  manifest.skills = reviewResults.map((r) => ({
-    name: r.skill,
-    confidence: r.quality_score,
-    evidence_ids: (skillEvidence.get(r.skill) || []).map((e) => e.id),
-    inferred_by: "llm" as const,
+  // 3. Write detected skills to manifest (confidence pending LLM review)
+  const skills: Skill[] = [...skillEvidence.keys()].map((name) => ({
+    name,
+    confidence: 0,
+    evidence_ids: (skillEvidence.get(name) || []).map((e) => e.id),
+    inferred_by: "static" as const,
   }));
 
-  // 8. Build claims
-  manifest.claims = manifest.skills.map((s, i) => ({
+  manifest.skills = skills;
+  manifest.claims = skills.map((s, i) => ({
     id: `CLAIM-${i + 1}`,
     category: inferCategory(s.name),
     skill: s.name,
@@ -161,8 +56,19 @@ export async function runInfer(cwd: string): Promise<void> {
 
   await writeManifest(manifestPath, manifest);
 
-  console.log(`\nCode review complete. ${reviewResults.length} skills reviewed.`);
-  for (const r of reviewResults) {
-    console.log(`  ${r.skill}: ${r.quality_score} — ${r.strengths.slice(0, 2).join(", ")}`);
+  // 4. Output summary for Claude Code to review
+  console.log(`\nDetected ${skillEvidence.size} skills:`);
+  for (const [skill, evidences] of skillEvidence) {
+    const files = eligibleFiles.get(skill) || [];
+    console.log(`  ${skill}: ${evidences.length} evidence items, ${files.length} eligible files`);
+    for (const f of files.slice(0, 5)) {
+      console.log(`    - ${f.path} (ownership: ${(f.ownership * 100).toFixed(0)}%)`);
+    }
+    if (files.length > 5) {
+      console.log(`    ... and ${files.length - 5} more`);
+    }
   }
+
+  console.log(`\nManifest written with ${skills.length} skills (confidence pending code review).`);
+  console.log("Claude Code will now review the code and assign quality scores.");
 }

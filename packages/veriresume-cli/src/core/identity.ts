@@ -55,7 +55,7 @@ export async function getGitHubEmails(): Promise<EmailCandidate[]> {
 export async function getRepoLogEmails(cwd: string, repoName: string): Promise<EmailCandidate[]> {
   try {
     const { stdout } = await execFileAsync(
-      "git", ["log", "--format=%ae", "--all"],
+      "git", ["log", "--format=%ae%n%ce", "--all"],
       { cwd }
     );
     const emails = [...new Set(

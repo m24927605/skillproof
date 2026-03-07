@@ -11,6 +11,7 @@ const execFileAsync = promisify(execFile);
 
 export interface VerifyResult {
   valid: boolean;
+  resumeTampered: boolean;
   signatures: { signer: string; valid: boolean; error?: string }[];
   manifestHash: string;
 }
@@ -41,10 +42,28 @@ export async function verifyBundle(bundlePath: string): Promise<VerifyResult> {
       }
     });
 
-    const allValid = sigResults.length > 0 && sigResults.every((s) => s.valid);
+    const allSigsValid = sigResults.length > 0 && sigResults.every((s) => s.valid);
+
+    let resumeTampered = false;
+    try {
+      const verificationContent = await readFile(
+        path.join(extractDir, "verification.json"), "utf8"
+      );
+      const verification = JSON.parse(verificationContent);
+      if (verification.resume_hash) {
+        const resumeContent = await readFile(
+          path.join(extractDir, "resume.md"), "utf8"
+        );
+        const actualHash = hashContent(resumeContent);
+        resumeTampered = actualHash !== verification.resume_hash;
+      }
+    } catch {
+      resumeTampered = true;
+    }
 
     return {
-      valid: allValid,
+      valid: allSigsValid && !resumeTampered,
+      resumeTampered,
       signatures: sigResults,
       manifestHash,
     };
@@ -65,6 +84,10 @@ export async function runVerify(bundlePath: string): Promise<void> {
   for (const sig of result.signatures) {
     const status = sig.valid ? "PASS" : "FAIL";
     console.log(`  ${sig.signer}: ${status}${sig.error ? ` (${sig.error})` : ""}`);
+  }
+
+  if (result.resumeTampered) {
+    console.log(`\nWARNING: resume.md has been tampered with!`);
   }
 
   if (!result.valid) {

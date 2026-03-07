@@ -41,4 +41,48 @@ describe("pack", () => {
     const files = await readdir(tempDir);
     assert.ok(files.includes("bundle.zip"), "bundle.zip should exist");
   });
+
+  it("includes rendered resume files (pdf) in bundle", async () => {
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+
+    const manifestPath = path.join(tempDir, ".veriresume", "resume-manifest.json");
+    await writeManifest(manifestPath, manifest);
+    await writeFile(path.join(tempDir, "resume.md"), "# Test Resume\n", "utf8");
+    await writeFile(path.join(tempDir, "resume.pdf"), "fake-pdf-content", "utf8");
+
+    await runPack(tempDir);
+
+    const { execFile: ef } = await import("node:child_process");
+    const { promisify: p } = await import("node:util");
+    const execFileAsync = p(ef);
+    const { mkdir: mkdirFs } = await import("node:fs/promises");
+
+    const extractDir = path.join(tempDir, "extracted");
+    await mkdirFs(extractDir, { recursive: true });
+    await execFileAsync("unzip", ["-o", path.join(tempDir, "bundle.zip"), "-d", extractDir]);
+
+    const files = await readdir(extractDir);
+    assert.ok(files.includes("resume.md"));
+    assert.ok(files.includes("resume.pdf"));
+  });
+
+  it("throws when no resume file exists", async () => {
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+
+    const manifestPath = path.join(tempDir, ".veriresume", "resume-manifest.json");
+    await writeManifest(manifestPath, manifest);
+    // No resume.md created
+
+    await assert.rejects(() => runPack(tempDir), /No resume file found/);
+  });
 });

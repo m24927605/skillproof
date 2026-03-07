@@ -7,6 +7,12 @@ import { ask, askYesNo } from "../core/prompt.ts";
 import { generateResume } from "../core/llm.ts";
 import { buildVerificationBlock } from "../core/verification.ts";
 
+export interface RenderOptions {
+  apiKey?: string;
+  personalInfo?: string;
+  yes?: boolean;
+}
+
 export function renderResume(manifest: Manifest): string {
   const skills = [...manifest.skills].sort((a, b) => b.confidence - a.confidence);
   const commitCount = manifest.evidence.filter((e) => e.type === "commit").length;
@@ -62,6 +68,7 @@ export async function runRender(
   locale?: string,
   format?: string,
   output?: string,
+  options?: RenderOptions,
 ): Promise<void> {
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
@@ -75,12 +82,17 @@ export async function runRender(
     return;
   }
 
-  const apiKey = await resolveApiKeyInteractive(cwd);
+  const apiKey = options?.apiKey || await resolveApiKeyInteractive(cwd);
 
-  const personalInfoResponse = await ask(
-    "Would you like to include a personal introduction or work experience?\n(Type your info, or 'skip' to continue): "
-  );
-  const personalInfo = personalInfoResponse.toLowerCase() === "skip" ? null : personalInfoResponse || null;
+  let personalInfo: string | null = null;
+  if (options?.personalInfo !== undefined) {
+    personalInfo = options.personalInfo || null;
+  } else if (!options?.yes) {
+    const personalInfoResponse = await ask(
+      "Would you like to include a personal introduction or work experience?\n(Type your info, or 'skip' to continue): "
+    );
+    personalInfo = personalInfoResponse.toLowerCase() === "skip" ? null : personalInfoResponse || null;
+  }
 
   console.log(`Generating resume in ${locale}...`);
   let resumeContent: string;
