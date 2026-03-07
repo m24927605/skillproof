@@ -47,7 +47,10 @@ Then in Claude Code, add the plugin from the cloned directory:
 ```bash
 npm install -g veriresume-cli
 
-# Run in any git repository
+# Run full pipeline in any git repository
+veriresume all
+
+# Or run each step individually
 veriresume scan
 veriresume infer-skills
 veriresume render
@@ -88,7 +91,7 @@ npx veriresume doctor
 
 ## The Pipeline
 
-Run `/resume-all` to execute the full pipeline, or run each step individually:
+Run `veriresume all` (CLI) or `/resume-all` (Claude Code plugin) to execute the full pipeline, or run each step individually:
 
 1. **`/resume-scan`** — Scans your git history, files, dependencies, and config. Builds an evidence graph and writes the manifest to `.veriresume/resume-manifest.json`.
 
