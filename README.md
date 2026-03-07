@@ -42,20 +42,27 @@ Then in Claude Code, add the plugin from the cloned directory:
 /plugin add /path/to/veriresume
 ```
 
-### Standalone CLI
+### Standalone CLI (npm)
+
+```bash
+npm install -g veriresume-cli
+
+# Run in any git repository
+veriresume scan
+veriresume infer-skills
+veriresume render
+veriresume sign
+veriresume pack
+veriresume verify bundle.zip
+```
+
+### Standalone CLI (from source)
 
 ```bash
 git clone https://github.com/m24927605/veriresume.git
 cd veriresume/packages/veriresume-cli
 npm install && npm run build
-
-# Run in any git repository
-npx veriresume scan
-npx veriresume infer-skills
-npx veriresume render
-npx veriresume sign
-npx veriresume pack
-npx veriresume verify bundle.zip
+npx veriresume doctor
 ```
 
 ### Verify Installation
@@ -188,7 +195,8 @@ veriresume/
 │       ├── core/                      # evidence, git, hashing, manifest, security, skills
 │       └── types/manifest.ts          # TypeScript interfaces
 └── docs/
-    └── OPENSPEC.md                   # Full specification
+    ├── OPENSPEC.md                   # Full specification
+    └── plans/archive/                # Completed design & implementation plans
 ```
 
 ## Testing
