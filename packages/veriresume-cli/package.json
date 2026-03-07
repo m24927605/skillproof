@@ -5,8 +5,11 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "veriresume": "src/index.ts"
+    "veriresume": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'",
