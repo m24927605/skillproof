@@ -55,5 +55,15 @@ describe("llm", () => {
       const { userMessage } = buildPromptMessages(manifest, "zh-TW", null);
       assert.ok(userMessage.includes("None"));
     });
+
+    it("uses displayName and contactEmail when provided", () => {
+      const { userMessage } = buildPromptMessages(manifest, "en-US", null, {
+        displayName: "Bob Smith",
+        contactEmail: "bob@resume.com",
+      });
+      assert.ok(userMessage.includes("Bob Smith"));
+      assert.ok(userMessage.includes("bob@resume.com"));
+      assert.ok(!userMessage.includes("Alice |"));
+    });
   });
 });

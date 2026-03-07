@@ -31,6 +31,23 @@ describe("render", () => {
     assert.ok(tsIndex < redisIndex, "Skills should be sorted by confidence desc");
   });
 
+  it("uses displayName and contactEmail when provided", () => {
+    const manifest: Manifest = {
+      schema_version: "1.0",
+      generated_at: "2025-01-01T00:00:00Z",
+      repo: { url: null, head_commit: "abc" },
+      author: { name: "git-name", email: "git@example.com" },
+      evidence: [],
+      skills: [],
+      claims: [],
+      signatures: [],
+    };
+    const md = renderResume(manifest, { displayName: "My Name", contactEmail: "me@resume.com" });
+    assert.ok(md.includes("# My Name"));
+    assert.ok(md.includes("me@resume.com"));
+    assert.ok(!md.includes("git-name"));
+  });
+
   it("includes evidence count summary", () => {
     const manifest: Manifest = {
       schema_version: "1.0",

@@ -11,15 +11,26 @@ export interface RenderOptions {
   apiKey?: string;
   personalInfo?: string;
   yes?: boolean;
+  displayName?: string;
+  contactEmail?: string;
 }
 
-export function renderResume(manifest: Manifest): string {
+export interface ResumeDisplayOptions {
+  displayName?: string;
+  contactEmail?: string;
+}
+
+export function renderResume(manifest: Manifest, display?: ResumeDisplayOptions): string {
   const skills = [...manifest.skills].sort((a, b) => b.confidence - a.confidence);
   const commitCount = manifest.evidence.filter((e) => e.type === "commit").length;
   const depCount = manifest.evidence.filter((e) => e.type === "dependency").length;
   const configCount = manifest.evidence.filter((e) => e.type === "config").length;
 
-  let md = `# ${manifest.author.name}\n\n`;
+  const name = display?.displayName || manifest.author.name;
+  let md = `# ${name}\n\n`;
+  if (display?.contactEmail) {
+    md += `**Email:** ${display.contactEmail}\n\n`;
+  }
   md += `> Verifiable Developer Resume — generated ${manifest.generated_at}\n\n`;
   md += `## Skills\n\n`;
 
@@ -73,8 +84,21 @@ export async function runRender(
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
 
+  // Resolve display name and contact email
+  let displayName = options?.displayName;
+  let contactEmail = options?.contactEmail;
+  if (!options?.yes && displayName === undefined) {
+    const nameAnswer = await ask(`Display name for resume (default: ${manifest.author.name}): `);
+    displayName = nameAnswer || undefined;
+  }
+  if (!options?.yes && contactEmail === undefined) {
+    const emailAnswer = await ask(`Contact email for resume (default: ${manifest.author.email}): `);
+    contactEmail = emailAnswer || undefined;
+  }
+  const display: ResumeDisplayOptions = { displayName, contactEmail };
+
   if (!locale) {
-    const md = renderResume(manifest);
+    const md = renderResume(manifest, display);
     const fmt = normalizeFormat(format || "md");
     const outputPath = output || path.join(cwd, `resume.${fmt === "jpeg" ? "jpg" : fmt}`);
     await exportToFormat(md, fmt, outputPath);
@@ -97,7 +121,7 @@ export async function runRender(
   console.log(`Generating resume in ${locale}...`);
   let resumeContent: string;
   try {
-    resumeContent = await generateResume(apiKey, manifest, locale, personalInfo);
+    resumeContent = await generateResume(apiKey, manifest, locale, personalInfo, display);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("401") || message.toLowerCase().includes("auth")) {

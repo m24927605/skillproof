@@ -6,10 +6,16 @@ export interface PromptMessages {
   userMessage: string;
 }
 
+export interface DisplayOverrides {
+  displayName?: string;
+  contactEmail?: string;
+}
+
 export function buildPromptMessages(
   manifest: Manifest,
   locale: string,
-  personalInfo: string | null
+  personalInfo: string | null,
+  display?: DisplayOverrides,
 ): PromptMessages {
   const skills = [...manifest.skills].sort((a, b) => b.confidence - a.confidence);
   const commitCount = manifest.evidence.filter((e) => e.type === "commit").length;
@@ -34,8 +40,11 @@ Rules:
     .map((s) => `- ${s.name} (confidence: ${s.confidence}, evidence count: ${s.evidence_ids.length}, inferred by: ${s.inferred_by})`)
     .join("\n");
 
+  const authorName = display?.displayName || manifest.author.name;
+  const authorEmail = display?.contactEmail || manifest.author.email;
+
   const userMessage = `## Author
-${manifest.author.name} | ${manifest.author.email}
+${authorName} | ${authorEmail}
 
 ## Verified Skills (sorted by confidence)
 ${skillLines}
@@ -57,10 +66,11 @@ export async function generateResume(
   apiKey: string,
   manifest: Manifest,
   locale: string,
-  personalInfo: string | null
+  personalInfo: string | null,
+  display?: DisplayOverrides,
 ): Promise<string> {
   const client = new Anthropic({ apiKey });
-  const { systemMessage, userMessage } = buildPromptMessages(manifest, locale, personalInfo);
+  const { systemMessage, userMessage } = buildPromptMessages(manifest, locale, personalInfo, display);
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
