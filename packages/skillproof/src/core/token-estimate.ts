@@ -106,6 +106,9 @@ export interface CostPreview {
   actualOutputTokens: number;
   totalCost: number;
   actualCost: number;
+  totalDetectedSkills?: number;
+  selectedForReview?: number;
+  staticOnlySkills?: number;
 }
 
 export function buildCostPreviewDisplay(preview: CostPreview): string {
@@ -113,6 +116,14 @@ export function buildCostPreviewDisplay(preview: CostPreview): string {
 
   let display = `\nCode Review Cost Estimate\n`;
   display += `${"─".repeat(40)}\n`;
+
+  if (preview.totalDetectedSkills != null) {
+    display += `  Total detected skills: ${preview.totalDetectedSkills}\n`;
+    display += `  Selected for LLM review: ${preview.selectedForReview ?? 0}\n`;
+    display += `  Static-only (skipped): ${preview.staticOnlySkills ?? 0}\n`;
+    display += `\n`;
+  }
+
   display += `  Review groups: ${preview.totalGroups}\n`;
   display += `  Estimated input tokens: ${formatTokens(preview.totalInputTokens)}\n`;
   display += `  Estimated output tokens: ${formatTokens(preview.totalOutputTokens)}\n`;

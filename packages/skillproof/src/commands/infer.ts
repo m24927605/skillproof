@@ -501,6 +501,9 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
         totalInputTokens, actualInputTokens,
         totalOutputTokens, actualOutputTokens,
         totalCost, actualCost,
+        totalDetectedSkills: skillEvidence.size,
+        selectedForReview: skillFilePaths.size,
+        staticOnlySkills: staticOnlySkills.length,
       };
 
       console.log(buildCostPreviewDisplay(preview));

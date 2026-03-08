@@ -85,6 +85,29 @@ describe("token-estimate", () => {
     });
   });
 
+  describe("buildCostPreviewDisplay with gating", () => {
+    it("shows review/skip split when gating info provided", () => {
+      const preview = {
+        totalGroups: 3,
+        cachedGroups: 0,
+        totalInputTokens: 80000,
+        actualInputTokens: 80000,
+        totalOutputTokens: 600,
+        actualOutputTokens: 600,
+        totalCost: 0.249,
+        actualCost: 0.249,
+        totalDetectedSkills: 12,
+        selectedForReview: 4,
+        staticOnlySkills: 8,
+      };
+      const display = buildCostPreviewDisplay(preview);
+      assert.ok(display.includes("12"), "should include total detected");
+      assert.ok(display.includes("4"), "should include selected for review");
+      assert.ok(display.includes("8"), "should include static-only count");
+      assert.ok(display.includes("static-only") || display.includes("Static-only"), "should mention static-only");
+    });
+  });
+
   describe("token budget regression", () => {
     // Fixed fixture: a repo with TypeScript, React, and Docker skills
     // TypeScript and React share .tsx files -> should be grouped
