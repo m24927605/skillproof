@@ -35,11 +35,17 @@ export function renderResume(manifest: Manifest, display?: ResumeDisplayOptions)
   md += `## Skills\n\n`;
 
   for (const skill of skills) {
+    const decision = skill.review_decision ?? (skill.inferred_by === "llm" ? "llm-reviewed" : "static-only");
     md += `### ${skill.name}\n`;
-    md += `- **Confidence:** ${skill.confidence}\n`;
+    md += `- **Confidence:** ${skill.confidence}`;
+    if (decision === "static-only") {
+      md += ` (static-only)\n`;
+    } else {
+      md += ` (reviewed)\n`;
+    }
     md += `- **Evidence:** ${skill.evidence_ids.join(" ")}\n`;
-    md += `- **Inferred by:** ${skill.inferred_by}\n`;
-    if (skill.strengths && skill.strengths.length > 0) {
+    // Only show strengths for LLM-reviewed skills
+    if (decision !== "static-only" && skill.strengths && skill.strengths.length > 0) {
       md += `- **Strengths:**\n`;
       for (const s of skill.strengths) {
         md += `  - ${s}\n`;

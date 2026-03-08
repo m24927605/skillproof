@@ -94,6 +94,37 @@ describe("llm", () => {
       assert.ok(userMessage.includes("Good code"));
     });
 
+    it("includes provenance instructions for hybrid scoring", () => {
+      const hybridManifest: Manifest = {
+        ...manifest,
+        skills: [
+          {
+            name: "TypeScript",
+            confidence: 0.72,
+            evidence_ids: ["EV-2"],
+            inferred_by: "llm",
+            review_decision: "llm-reviewed",
+            static_confidence: 0.5,
+            llm_confidence: 0.85,
+            strengths: ["Good types"],
+            reasoning: "Solid",
+          },
+          {
+            name: "Redis",
+            confidence: 0.35,
+            evidence_ids: ["EV-1"],
+            inferred_by: "static",
+            review_decision: "static-only",
+            static_confidence: 0.35,
+          },
+        ],
+      };
+      const { systemMessage, userMessage } = buildPromptMessages(hybridManifest, "en-US", null);
+      assert.ok(systemMessage.includes("static-only"), "system prompt should mention static-only provenance");
+      assert.ok(systemMessage.includes("llm-reviewed"), "system prompt should mention llm-reviewed provenance");
+      assert.ok(userMessage.includes("static-only") || userMessage.includes("review_decision"), "user message should include review_decision");
+    });
+
     it("uses displayName and contactEmail when provided", () => {
       const { userMessage } = buildPromptMessages(manifest, "en-US", null, {
         displayName: "Bob Smith",
