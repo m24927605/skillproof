@@ -46,6 +46,8 @@ describe("verification", () => {
     assert.ok(block.includes("**Public key fingerprint:** LS0tLS1CRUdJTiBQ"));
     assert.ok(block.includes("SIGNED"));
     assert.ok(block.includes("<details>"));
+    assert.ok(!block.includes("**Manifest hash:**"));
+    assert.ok(!block.includes("**Signed at:**"));
   });
 
   it("shows unsigned warning when no signatures", () => {

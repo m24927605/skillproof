@@ -1,6 +1,7 @@
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { readFile, writeFile } from "node:fs/promises";
 import { runScan } from "./scan.ts";
 import { runScanMulti } from "./scan-multi.ts";
 import { runInfer } from "./infer.ts";
@@ -8,6 +9,8 @@ import { runRender } from "./render.ts";
 import { runSign } from "./sign.ts";
 import { runPack } from "./pack.ts";
 import { runVerify } from "./verify.ts";
+import { buildVerificationBlock } from "../core/verification.ts";
+import { getManifestPath, readManifest } from "../core/manifest.ts";
 import { selectPrompt, ask } from "../core/prompt.ts";
 import { resolveApiKey, readConfig, writeConfig } from "../core/config.ts";
 import { askYesNo } from "../core/prompt.ts";
@@ -15,6 +18,18 @@ import { askYesNo } from "../core/prompt.ts";
 const execFileAsync = promisify(execFile);
 
 type ScanMode = "current" | "local-multi" | "github";
+const VERIFICATION_HEADER = "\n---\n\n## SkillProof Verification\n\n";
+
+async function refreshVerificationBlockForMarkdown(cwd: string, outputPath: string): Promise<void> {
+  const manifest = await readManifest(getManifestPath(cwd));
+  const block = buildVerificationBlock(manifest);
+  const current = await readFile(outputPath, "utf8");
+  const markerIndex = current.indexOf(VERIFICATION_HEADER);
+  const next = markerIndex >= 0
+    ? `${current.slice(0, markerIndex)}${block}`
+    : `${current}${block}`;
+  await writeFile(outputPath, next, "utf8");
+}
 
 export async function runAll(
   cwd: string,
@@ -32,6 +47,8 @@ export async function runAll(
     "Inferring skills",
     "Rendering resume",
     "Signing manifest",
+    "Refreshing verification block",
+    "Finalizing signature",
     "Packing bundle",
     "Verifying bundle",
   ];
@@ -159,11 +176,24 @@ export async function runAll(
     step("Signing manifest");
     await runSign(cwd);
 
-    // Step 5: Pack
+    // Step 5: Refresh verification block without another LLM call
+    step("Refreshing verification block");
+    const normalizedFormat = (format || "md").toLowerCase();
+    if (normalizedFormat === "md" && output.toLowerCase().endsWith(".md")) {
+      await refreshVerificationBlockForMarkdown(cwd, output);
+    } else {
+      await runRender(cwd, locale, format, output, renderOpts);
+    }
+
+    // Step 6: Re-sign so file_hashes match the final rendered resume
+    step("Finalizing signature");
+    await runSign(cwd);
+
+    // Step 7: Pack
     step("Packing bundle");
     await runPack(cwd);
 
-    // Step 6: Verify
+    // Step 8: Verify
     const bundlePath = path.join(cwd, "bundle.zip");
     step("Verifying bundle");
     await runVerify(bundlePath);
