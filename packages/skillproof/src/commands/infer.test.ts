@@ -154,6 +154,37 @@ describe("infer", () => {
     assert.deepEqual(batches.map((batch) => batch.map((file) => file.path)), [["a.ts", "b.ts"], ["c.ts"]]);
   });
 
+  it("skipped skills keep static confidence and review_decision static-only", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const skill = buildHybridSkill("Redis", [
+      { id: "EV-DEP-redis", type: "dependency" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 1, source: "package.json" },
+    ], undefined);
+    assert.equal(skill.review_decision, "static-only");
+    assert.equal(skill.inferred_by, "static");
+    assert.equal(skill.confidence, skill.static_confidence);
+    assert.equal(skill.llm_confidence, undefined);
+    assert.ok(typeof skill.static_confidence === "number");
+  });
+
+  it("reviewed skills record both static and llm confidence", async () => {
+    const { mergeHybridConfidence } = await import("./infer.ts");
+    const result = mergeHybridConfidence(0.5, 0.8);
+    const expected = Math.round((0.5 * 0.35 + 0.8 * 0.65) * 100) / 100;
+    assert.equal(result, expected);
+  });
+
+  it("cache hit records review_decision cached-llm", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const review = { skill: "TypeScript", quality_score: 0.85, reasoning: "Good", strengths: ["types"] };
+    const skill = buildHybridSkill("TypeScript", [
+      { id: "EV-FILE-1", type: "file" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 0.9, source: "src/app.ts" },
+    ], review, true);
+    assert.equal(skill.review_decision, "cached-llm");
+    assert.equal(skill.inferred_by, "llm");
+    assert.ok(typeof skill.static_confidence === "number");
+    assert.equal(skill.llm_confidence, 0.85);
+  });
+
   it("mergeReviewResults averages scores and deduplicates strengths", async () => {
     const { mergeReviewResults } = await import("./infer.ts");
 
