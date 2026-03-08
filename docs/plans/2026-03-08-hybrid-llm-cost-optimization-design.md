@@ -42,8 +42,9 @@ These two fields have distinct, non-overlapping responsibilities:
 The existing skill grouping and batching pipeline is retained for efficiency. Changes:
 
 - **Grouped prompts** contain per-skill digest sections. Each skill within a group gets its own evidence summary and snippets so the model can score skills independently.
-- **Shared context** (e.g., repo-level signals like CI presence, language distribution) may appear once at the top of the grouped prompt.
+- **Shared context** (e.g., repo-level signals like CI presence, language distribution) may appear once at the top of the grouped prompt as **non-scoring orientation metadata**. The prompt must explicitly instruct the model to score each skill solely from that skill's digest section. Shared context provides repo orientation only and must not influence individual skill scores. This constraint is what makes per-skill caching sound — a skill's score is fully determined by its own digest.
 - **Batching** operates on **digest payload size**, not raw file dumps. The 25K input token limit applies to the digest-based prompt.
+- **Partial reruns**: When a group-level cache misses but some per-skill caches hit, only uncached skills are sent to the LLM. These are sent as a smaller group (or individual reviews if only one skill remains). Cached neighbors are **not** re-included as frozen context, because the non-scoring shared context constraint guarantees that a skill's score depends only on its own digest, not on which neighbors are present. This means partial reruns produce equivalent scores to full grouped reviews.
 - Individual skills still receive distinct `static_confidence`, `review_priority`, and `evidence_digest` values regardless of grouping.
 
 ### 4. Cache Strategy: Two-Level Caching
@@ -80,7 +81,7 @@ A group-level hit populates all per-skill results at once. If the group-level ca
 - Changing prompt template → prompt version bumps → all caches invalidate
 - Changing a file in one skill → that skill's digest hash changes → per-skill cache misses; other skills in the same group remain cached
 - Changing group composition → group-level cache misses; per-skill caches for unchanged members still hit
-- Changing shared context → shared context hash changes → group-level cache misses; per-skill caches still hit (shared context affects group scoring but per-skill cache captures the actual result)
+- Changing shared context → shared context hash changes → group-level cache misses; per-skill caches still hit (shared context is non-scoring orientation metadata, so per-skill scores are unaffected)
 
 ### 5. Architecture Flow
 
