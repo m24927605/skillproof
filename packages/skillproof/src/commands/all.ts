@@ -54,6 +54,7 @@ export async function runAll(
   ];
 
   let currentStep = 0;
+  let workDir = cwd;
   const step = (name: string) => {
     currentStep++;
     console.log(`\n[${currentStep}/${steps.length}] ${name}...`);
@@ -103,19 +104,22 @@ export async function runAll(
         return;
       }
       await runScan(cwd);
+      workDir = cwd;
     } else if (scanMode === "local-multi") {
       const parentDir = options?.parentDir ?? await ask("Parent directory path (press Enter for current directory): ");
-      await runScanMulti(parentDir || cwd, false, {
+      workDir = parentDir || cwd;
+      await runScanMulti(workDir, false, {
         repos: options?.repos,
         emails: options?.emails,
       });
     } else {
       await runScanMulti(cwd, true);
+      workDir = cwd;
     }
 
     // Step 2: Infer
     step("Inferring skills");
-    await runInfer(cwd, {
+    await runInfer(workDir, {
       skipLlm: options?.skipLlm,
       maxReviewTokens: options?.maxReviewTokens,
       yes: options?.yes,
@@ -151,7 +155,7 @@ export async function runAll(
 
       if (!output) {
         const ext = (format === "jpeg" ? "jpg" : format) || "md";
-        const defaultOutput = path.join(cwd, `resume.${ext}`);
+        const defaultOutput = path.join(workDir, `resume.${ext}`);
         const outputAnswer = await ask(`Output path (default: ${defaultOutput}): `);
         output = outputAnswer || defaultOutput;
       }
@@ -159,7 +163,7 @@ export async function runAll(
 
     if (!output) {
       const ext = (format === "jpeg" ? "jpg" : format) || "md";
-      output = path.join(cwd, `resume.${ext}`);
+      output = path.join(workDir, `resume.${ext}`);
     }
 
     // Step 3: Render
@@ -170,31 +174,31 @@ export async function runAll(
       displayName: options?.displayName,
       contactEmail: options?.contactEmail,
     };
-    await runRender(cwd, locale, format, output, renderOpts);
+    await runRender(workDir, locale, format, output, renderOpts);
 
     // Step 4: Sign (computes file_hashes for resume files automatically)
     step("Signing manifest");
-    await runSign(cwd);
+    await runSign(workDir);
 
     // Step 5: Refresh verification block without another LLM call
     step("Refreshing verification block");
     const normalizedFormat = (format || "md").toLowerCase();
     if (normalizedFormat === "md" && output.toLowerCase().endsWith(".md")) {
-      await refreshVerificationBlockForMarkdown(cwd, output);
+      await refreshVerificationBlockForMarkdown(workDir, output);
     } else {
-      await runRender(cwd, locale, format, output, renderOpts);
+      await runRender(workDir, locale, format, output, renderOpts);
     }
 
     // Step 6: Re-sign so file_hashes match the final rendered resume
     step("Finalizing signature");
-    await runSign(cwd);
+    await runSign(workDir);
 
     // Step 7: Pack
     step("Packing bundle");
-    await runPack(cwd);
+    await runPack(workDir);
 
     // Step 8: Verify
-    const bundlePath = path.join(cwd, "bundle.zip");
+    const bundlePath = path.join(workDir, "bundle.zip");
     step("Verifying bundle");
     await runVerify(bundlePath);
 

@@ -1,6 +1,6 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile, readFile, access } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, readFile, access, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -79,5 +79,44 @@ describe("runAll", () => {
 
     // Verify bundle was created
     await access(path.join(tempDir, "bundle.zip"));
+  });
+
+  it("uses the multi-project parent directory for infer and downstream outputs", async () => {
+    const { runAll } = await import("./all.ts");
+    const launchDir = await mkdtemp(path.join(tmpdir(), "skillproof-launch-"));
+    const parentDir = await mkdtemp(path.join(tmpdir(), "skillproof-parent-"));
+    const repoDir = path.join(parentDir, "repo-a");
+
+    await mkdir(repoDir, { recursive: true });
+    await execFileAsync("git", ["init", repoDir]);
+    await execFileAsync("git", ["-C", repoDir, "config", "user.name", "Test Author"]);
+    await execFileAsync("git", ["-C", repoDir, "config", "user.email", "test@example.com"]);
+    await writeFile(
+      path.join(repoDir, "package.json"),
+      JSON.stringify({ name: "repo-a", version: "1.0.0", dependencies: { express: "^4.18.0" } }, null, 2),
+      "utf8"
+    );
+    await writeFile(path.join(repoDir, "index.ts"), 'import express from "express";\nconst app = express();\n', "utf8");
+    await execFileAsync("git", ["-C", repoDir, "add", "."]);
+    await execFileAsync("git", ["-C", repoDir, "commit", "-m", "init"]);
+
+    try {
+      await runAll(launchDir, {
+        scanMode: "local-multi",
+        parentDir,
+        repos: ["repo-a"],
+        emails: ["test@example.com"],
+        format: "md",
+        skipLlm: true,
+      });
+
+      await access(getManifestPath(parentDir));
+      await access(path.join(parentDir, "resume.md"));
+      await access(path.join(parentDir, "bundle.zip"));
+      await assert.rejects(access(getManifestPath(path.join(parentDir, "resumes"))));
+    } finally {
+      await rm(launchDir, { recursive: true, force: true });
+      await rm(parentDir, { recursive: true, force: true });
+    }
   });
 });
