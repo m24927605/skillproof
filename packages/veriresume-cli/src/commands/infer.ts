@@ -5,8 +5,10 @@ import { detectSkillEvidence } from "../core/skills.ts";
 import { resolveApiKey } from "../core/config.ts";
 import { ask, askYesNo } from "../core/prompt.ts";
 import { readConfig, writeConfig } from "../core/config.ts";
-import { reviewSkill } from "../core/code-review.ts";
+import { reviewSkillGroup } from "../core/code-review.ts";
+import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, PROMPT_VERSION } from "../core/review-cache.ts";
 import { truncateFileContent, estimateTokens } from "../core/token-estimate.ts";
+import { groupSkillsByFileOverlap } from "../core/skill-grouping.ts";
 import type { FileForReview } from "../core/token-estimate.ts";
 import type { Claim, Evidence, Skill } from "../types/manifest.ts";
 
@@ -92,72 +94,192 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
     console.log(`\nAnalyzing ${skillEvidence.size} skills with code review...`);
 
     skills = [];
+
+    // First pass: collect file paths per skill and identify skills without files
+    const skillFilePaths = new Map<string, string[]>();
+    const skillsWithoutFiles: string[] = [];
+
     for (const [name, evs] of skillEvidence) {
       const fileEvidence = collectFilesForReview(manifest.evidence, evs.map((e) => e.id));
-
       if (fileEvidence.length === 0) {
-        // No files to review — use heuristic
-        skills.push({
-          name,
-          confidence: heuristicConfidence(evs),
-          evidence_ids: evs.map((e) => e.id),
-          inferred_by: "static" as const,
-        });
-        continue;
+        skillsWithoutFiles.push(name);
+      } else {
+        skillFilePaths.set(name, fileEvidence.map((e) => e.source));
+      }
+    }
+
+    // Add heuristic-only skills (no files to review)
+    for (const name of skillsWithoutFiles) {
+      const evs = skillEvidence.get(name)!;
+      skills.push({
+        name,
+        confidence: heuristicConfidence(evs),
+        evidence_ids: evs.map((e) => e.id),
+        inferred_by: "static" as const,
+      });
+    }
+
+    // Group skills by file overlap
+    const groups = groupSkillsByFileOverlap(skillFilePaths);
+
+    // Process each group
+    for (const group of groups) {
+      const groupSkillNames = group.skills;
+      const groupCacheKeyName = [...groupSkillNames].sort().join("+");
+
+      // Collect unique files for the group, respecting token budget
+      const allFileEvidence = new Map<string, Evidence>();
+      for (const skillName of groupSkillNames) {
+        const evs = skillEvidence.get(skillName)!;
+        const fileEvs = collectFilesForReview(manifest.evidence, evs.map((e) => e.id));
+        for (const ev of fileEvs) {
+          if (!allFileEvidence.has(ev.source)) {
+            allFileEvidence.set(ev.source, ev);
+          }
+        }
       }
 
-      // Read file contents, sorted by ownership, up to token budget
+      // Sort by ownership descending and read files up to token budget
+      const sortedEvidence = [...allFileEvidence.values()].sort((a, b) => b.ownership - a.ownership);
       const filesToReview: FileForReview[] = [];
       let tokenCount = 0;
-      for (const ev of fileEvidence) {
+      const budgetPerGroup = TOKEN_BUDGET_PER_SKILL * groupSkillNames.length;
+
+      for (const ev of sortedEvidence) {
         const filePath = path.join(cwd, ev.source);
         let content: string;
         try {
           content = await readFile(filePath, "utf-8");
         } catch {
-          continue; // file may not exist (e.g., deleted)
+          continue;
         }
         const truncated = truncateFileContent(content);
         const tokens = estimateTokens(truncated);
-        if (tokenCount + tokens > TOKEN_BUDGET_PER_SKILL && filesToReview.length > 0) {
+        if (tokenCount + tokens > budgetPerGroup && filesToReview.length > 0) {
           break;
         }
-        filesToReview.push({ path: ev.source, content: truncated, ownership: ev.ownership, skill: name });
+        filesToReview.push({ path: ev.source, content: truncated, ownership: ev.ownership, skill: groupSkillNames[0] });
         tokenCount += tokens;
       }
 
       if (filesToReview.length === 0) {
-        skills.push({
-          name,
-          confidence: heuristicConfidence(evs),
-          evidence_ids: evs.map((e) => e.id),
-          inferred_by: "static" as const,
-        });
+        for (const skillName of groupSkillNames) {
+          const evs = skillEvidence.get(skillName)!;
+          skills.push({
+            name: skillName,
+            confidence: heuristicConfidence(evs),
+            evidence_ids: evs.map((e) => e.id),
+            inferred_by: "static" as const,
+          });
+        }
         continue;
       }
 
-      console.log(`  Reviewing ${name}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
-      try {
-        const review = await reviewSkill(apiKey, name, filesToReview);
-        console.log(`  ${name}: ${review.quality_score} — ${review.reasoning}`);
+      // Check cache using combined key
+      const fileHashes = sortedEvidence
+        .filter((ev) => filesToReview.some((f) => f.path === ev.source))
+        .map((ev) => ev.hash);
+      const cacheKey = computeCacheKey(groupCacheKeyName, fileHashes, PROMPT_VERSION);
+      const cachedGroup = await getCachedGroupReview(cwd, cacheKey);
 
-        skills.push({
-          name,
-          confidence: review.quality_score,
-          evidence_ids: evs.map((e) => e.id),
-          inferred_by: "llm" as const,
-          strengths: review.strengths,
-          reasoning: review.reasoning,
-        });
+      if (cachedGroup && cachedGroup.length > 0) {
+        // Group cache hit — map each cached review to its skill
+        const cachedMap = new Map(cachedGroup.map((r) => [r.skill, r]));
+        for (const skillName of groupSkillNames) {
+          const evs = skillEvidence.get(skillName)!;
+          const cached = cachedMap.get(skillName);
+          if (cached) {
+            console.log(`  ${skillName}: cached — ${cached.quality_score} — ${cached.reasoning}`);
+            skills.push({
+              name: skillName,
+              confidence: cached.quality_score,
+              evidence_ids: evs.map((e) => e.id),
+              inferred_by: "llm" as const,
+              strengths: cached.strengths,
+              reasoning: cached.reasoning,
+            });
+          } else {
+            // Skill not in group cache — try individual cache
+            const individualKey = computeCacheKey(skillName, fileHashes, PROMPT_VERSION);
+            const individualCached = await getCachedReview(cwd, individualKey);
+            if (individualCached) {
+              console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
+              skills.push({
+                name: skillName,
+                confidence: individualCached.quality_score,
+                evidence_ids: evs.map((e) => e.id),
+                inferred_by: "llm" as const,
+                strengths: individualCached.strengths,
+                reasoning: individualCached.reasoning,
+              });
+            } else {
+              skills.push({
+                name: skillName,
+                confidence: heuristicConfidence(evs),
+                evidence_ids: evs.map((e) => e.id),
+                inferred_by: "static" as const,
+              });
+            }
+          }
+        }
+        continue;
+      }
+
+      const skillLabel = groupSkillNames.length > 1
+        ? `[${groupSkillNames.join(", ")}]`
+        : groupSkillNames[0];
+      console.log(`  Reviewing ${skillLabel}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
+
+      try {
+        const reviews = await reviewSkillGroup(apiKey, groupSkillNames, filesToReview);
+
+        // Save all reviews under group cache key for future lookups
+        if (reviews.length > 0) {
+          await saveCachedGroupReview(cwd, cacheKey, reviews);
+        }
+        // Also cache individual results
+        for (const review of reviews) {
+          const individualKey = computeCacheKey(review.skill, fileHashes, PROMPT_VERSION);
+          await saveCachedReview(cwd, individualKey, review);
+        }
+
+        // Map results back to skills
+        const reviewMap = new Map(reviews.map((r) => [r.skill, r]));
+        for (const skillName of groupSkillNames) {
+          const evs = skillEvidence.get(skillName)!;
+          const review = reviewMap.get(skillName);
+          if (review) {
+            console.log(`  ${skillName}: ${review.quality_score} — ${review.reasoning}`);
+            skills.push({
+              name: skillName,
+              confidence: review.quality_score,
+              evidence_ids: evs.map((e) => e.id),
+              inferred_by: "llm" as const,
+              strengths: review.strengths,
+              reasoning: review.reasoning,
+            });
+          } else {
+            console.log(`  ${skillName}: no review returned, falling back to heuristic`);
+            skills.push({
+              name: skillName,
+              confidence: heuristicConfidence(evs),
+              evidence_ids: evs.map((e) => e.id),
+              inferred_by: "static" as const,
+            });
+          }
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        console.log(`  ${name}: code review failed (${message}), falling back to heuristic`);
-        skills.push({
-          name,
-          confidence: heuristicConfidence(evs),
-          evidence_ids: evs.map((e) => e.id),
-          inferred_by: "static" as const,
-        });
+        console.log(`  ${skillLabel}: code review failed (${message}), falling back to heuristic`);
+        for (const skillName of groupSkillNames) {
+          const evs = skillEvidence.get(skillName)!;
+          skills.push({
+            name: skillName,
+            confidence: heuristicConfidence(evs),
+            evidence_ids: evs.map((e) => e.id),
+            inferred_by: "static" as const,
+          });
+        }
       }
     }
   }

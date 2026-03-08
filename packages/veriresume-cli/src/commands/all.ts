@@ -22,6 +22,7 @@ export async function runAll(
     locale?: string; format?: string; output?: string;
     scanMode?: ScanMode; parentDir?: string;
     repos?: string[]; emails?: string[];
+    displayName?: string; contactEmail?: string;
     skipLlm?: boolean;
   },
 ): Promise<void> {
@@ -139,7 +140,13 @@ export async function runAll(
 
     // Step 4: Render
     step("Rendering resume");
-    await runRender(cwd, locale, format, output, options?.skipLlm ? { yes: true } : undefined);
+    const hasCliFlags = !!(options?.locale && options?.format && options?.output);
+    const renderOpts: Parameters<typeof runRender>[4] = {
+      yes: options?.skipLlm || hasCliFlags || false,
+      displayName: options?.displayName,
+      contactEmail: options?.contactEmail,
+    };
+    await runRender(cwd, locale, format, output, renderOpts);
 
     // Step 5: Pack
     step("Packing bundle");

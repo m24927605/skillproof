@@ -130,10 +130,13 @@ program
   .option("--locale <locale>", "Resume locale (e.g., en-US, zh-TW)")
   .option("--format <format>", "Output format: md, pdf, png, jpeg")
   .option("-o, --output <path>", "Output file path")
+  .option("--display-name <name>", "Display name for the resume")
+  .option("--contact-email <email>", "Contact email for the resume")
   .action(async (options: {
     scanMode?: string; parentDir?: string;
     repos?: string; emails?: string;
     locale?: string; format?: string; output?: string;
+    displayName?: string; contactEmail?: string;
   }) => {
     await runAll(process.cwd(), {
       scanMode: options.scanMode as "current" | "local-multi" | "github" | undefined,
@@ -143,6 +146,8 @@ program
       locale: options.locale,
       format: options.format,
       output: options.output,
+      displayName: options.displayName,
+      contactEmail: options.contactEmail,
     });
   });
 
