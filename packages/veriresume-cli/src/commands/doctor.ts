@@ -150,14 +150,14 @@ export async function runDoctor(): Promise<void> {
     await checkCommand("gh", ["auth", "status"], "gh auth", false, "gh auth login"),
   );
 
-  // 7. unzip (optional)
+  // 7. unzip (required for verify)
   results.push(
-    await checkCommand("unzip", ["-v"], "unzip", false, "brew install unzip"),
+    await checkCommand("unzip", ["-v"], "unzip", true, "brew install unzip"),
   );
 
-  // 8. zipinfo (optional, used by verify for Zip Slip protection)
+  // 8. zipinfo (required for verify — Zip Slip protection)
   results.push(
-    await checkCommand("which", ["zipinfo"], "zipinfo", false, "brew install unzip (includes zipinfo)"),
+    await checkCommand("zipinfo", ["-h"], "zipinfo", true, "brew install unzip (includes zipinfo)"),
   );
 
   // 9. Chrome (optional, for PDF/image export)
