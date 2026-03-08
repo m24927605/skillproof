@@ -37,6 +37,66 @@ describe("merge", () => {
       assert.ok(py);
       assert.equal(py.confidence, 0.7);
     });
+
+    it("adopts provenance metadata from higher-confidence skill", () => {
+      const skills: Skill[] = [
+        {
+          name: "TypeScript",
+          confidence: 0.4,
+          evidence_ids: ["a:EV-1"],
+          inferred_by: "static",
+          static_confidence: 0.4,
+          review_decision: "static-only",
+        },
+        {
+          name: "TypeScript",
+          confidence: 0.72,
+          evidence_ids: ["b:EV-2"],
+          inferred_by: "llm",
+          static_confidence: 0.5,
+          llm_confidence: 0.85,
+          review_decision: "llm-reviewed",
+          strengths: ["Strong types"],
+          reasoning: "Solid usage",
+        },
+      ];
+      const result = mergeSkills(skills);
+      const ts = result.find((s) => s.name === "TypeScript")!;
+      assert.equal(ts.confidence, 0.72);
+      assert.equal(ts.inferred_by, "llm");
+      assert.equal(ts.review_decision, "llm-reviewed");
+      assert.equal(ts.llm_confidence, 0.85);
+      assert.deepEqual(ts.strengths, ["Strong types"]);
+      assert.equal(ts.reasoning, "Solid usage");
+      // evidence_ids should be merged from both
+      assert.deepEqual(ts.evidence_ids, ["a:EV-1", "b:EV-2"]);
+    });
+
+    it("keeps first skill metadata when it has higher confidence", () => {
+      const skills: Skill[] = [
+        {
+          name: "React",
+          confidence: 0.8,
+          evidence_ids: ["a:EV-1"],
+          inferred_by: "llm",
+          strengths: ["Good hooks"],
+          review_decision: "llm-reviewed",
+        },
+        {
+          name: "React",
+          confidence: 0.3,
+          evidence_ids: ["b:EV-2"],
+          inferred_by: "static",
+          review_decision: "static-only",
+        },
+      ];
+      const result = mergeSkills(skills);
+      const react = result.find((s) => s.name === "React")!;
+      assert.equal(react.confidence, 0.8);
+      assert.equal(react.inferred_by, "llm");
+      assert.deepEqual(react.strengths, ["Good hooks"]);
+      assert.deepEqual(react.evidence_ids, ["a:EV-1", "b:EV-2"]);
+    });
   });
 
   describe("mergeManifests", () => {
