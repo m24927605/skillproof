@@ -449,5 +449,5 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
     console.log(`  ${s.name}: ${s.confidence} (${level}) [${s.inferred_by}]`);
   }
   console.log(`\nTotal skills: ${skills.length}`);
-  console.log(`Total claims: ${manifest.claims.length}`);
+  console.log(`Total claims: ${skills.length}`);
 }
