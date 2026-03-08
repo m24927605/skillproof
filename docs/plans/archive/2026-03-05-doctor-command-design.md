@@ -6,7 +6,7 @@ Add a `skillproof doctor` command that checks all prerequisites and displays a f
 
 ## Doctor Command
 
-**File:** `packages/skillproof-cli/src/commands/doctor.ts`
+**File:** `packages/skillproof/src/commands/doctor.ts`
 
 7 checks in order:
 

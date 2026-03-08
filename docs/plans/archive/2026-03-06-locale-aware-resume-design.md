@@ -76,6 +76,6 @@ If manifest is unsigned (empty signatures), omit signature fields and show: "Uns
 
 ## Files NOT Modified
 
-- `packages/skillproof-cli/src/commands/render.ts` — kept as no-LLM English fallback
+- `packages/skillproof/src/commands/render.ts` — kept as no-LLM English fallback
 - `commands/skillproof-all.md` / `resume-all` procedure — inherits new behavior automatically
 - `skills/resume/templates/resume.modern.md` — unused but not deleted

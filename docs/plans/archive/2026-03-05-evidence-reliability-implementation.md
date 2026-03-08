@@ -13,7 +13,7 @@
 ### Task 1: Add "pull_request" to EvidenceType
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/types/manifest.ts:1`
+- Modify: `packages/skillproof/src/types/manifest.ts:1`
 
 **Step 1: Update the type**
 
@@ -28,13 +28,13 @@ export type EvidenceType = "commit" | "file" | "snippet" | "dependency" | "confi
 
 **Step 2: Verify it compiles**
 
-Run: `cd packages/skillproof-cli && npx tsc --noEmit`
+Run: `cd packages/skillproof && npx tsc --noEmit`
 Expected: No errors
 
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/types/manifest.ts
+git add packages/skillproof/src/types/manifest.ts
 git commit -m "feat: add pull_request to EvidenceType"
 ```
 
@@ -43,8 +43,8 @@ git commit -m "feat: add pull_request to EvidenceType"
 ### Task 2: Add git blame parsing to git.ts
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/git.ts`
-- Modify: `packages/skillproof-cli/src/core/git.test.ts`
+- Modify: `packages/skillproof/src/core/git.ts`
+- Modify: `packages/skillproof/src/core/git.test.ts`
 
 **Step 1: Write failing tests**
 
@@ -130,7 +130,7 @@ describe("parseBlameOutput", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test 2>&1 | tail -20`
+Run: `cd packages/skillproof && npm test 2>&1 | tail -20`
 Expected: FAIL — parseBlameOutput not exported
 
 **Step 3: Implement parseBlameOutput and getFileOwnership in git.ts**
@@ -179,13 +179,13 @@ export async function getFileOwnership(
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test 2>&1 | tail -20`
+Run: `cd packages/skillproof && npm test 2>&1 | tail -20`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/git.ts packages/skillproof-cli/src/core/git.test.ts
+git add packages/skillproof/src/core/git.ts packages/skillproof/src/core/git.test.ts
 git commit -m "feat: add git blame parsing with ownership calculation"
 ```
 
@@ -194,8 +194,8 @@ git commit -m "feat: add git blame parsing with ownership calculation"
 ### Task 3: Add GitHub PR functions to git.ts
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/git.ts`
-- Modify: `packages/skillproof-cli/src/core/git.test.ts`
+- Modify: `packages/skillproof/src/core/git.ts`
+- Modify: `packages/skillproof/src/core/git.test.ts`
 
 **Step 1: Write failing tests**
 
@@ -366,7 +366,7 @@ export async function getGitHubUsername(): Promise<string | null> {
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/git.ts packages/skillproof-cli/src/core/git.test.ts
+git add packages/skillproof/src/core/git.ts packages/skillproof/src/core/git.test.ts
 git commit -m "feat: add GitHub PR parsing and repo remote URL extraction"
 ```
 
@@ -375,8 +375,8 @@ git commit -m "feat: add GitHub PR parsing and repo remote URL extraction"
 ### Task 4: Add createPREvidence to evidence.ts
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/evidence.ts`
-- Modify: `packages/skillproof-cli/src/core/evidence.test.ts`
+- Modify: `packages/skillproof/src/core/evidence.ts`
+- Modify: `packages/skillproof/src/core/evidence.test.ts`
 
 **Step 1: Write failing test**
 
@@ -440,7 +440,7 @@ export function createPREvidence(pr: PullRequest): Evidence {
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/evidence.ts packages/skillproof-cli/src/core/evidence.test.ts
+git add packages/skillproof/src/core/evidence.ts packages/skillproof/src/core/evidence.test.ts
 git commit -m "feat: add createPREvidence for GitHub pull request evidence"
 ```
 
@@ -449,8 +449,8 @@ git commit -m "feat: add createPREvidence for GitHub pull request evidence"
 ### Task 5: Fix scan.ts — file content hashing + blame ownership
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/scan.ts`
-- Modify: `packages/skillproof-cli/src/commands/scan.test.ts`
+- Modify: `packages/skillproof/src/commands/scan.ts`
+- Modify: `packages/skillproof/src/commands/scan.test.ts`
 
 **Step 1: Update scan.test.ts**
 
@@ -785,13 +785,13 @@ export async function runScan(cwd: string): Promise<void> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test 2>&1 | tail -20`
+Run: `cd packages/skillproof && npm test 2>&1 | tail -20`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/scan.ts packages/skillproof-cli/src/commands/scan.test.ts
+git add packages/skillproof/src/commands/scan.ts packages/skillproof/src/commands/scan.test.ts
 git commit -m "fix: read actual file content and compute git blame ownership in scan"
 ```
 
@@ -800,8 +800,8 @@ git commit -m "fix: read actual file content and compute git blame ownership in 
 ### Task 6: Add PR-based skill rules to skills.ts
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/skills.ts`
-- Modify: `packages/skillproof-cli/src/core/skills.test.ts`
+- Modify: `packages/skillproof/src/core/skills.ts`
+- Modify: `packages/skillproof/src/core/skills.test.ts`
 
 **Step 1: Write failing test**
 
@@ -853,7 +853,7 @@ Add at the end of `SIGNAL_RULES` array (before the closing `];`):
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/skills.ts packages/skillproof-cli/src/core/skills.test.ts
+git add packages/skillproof/src/core/skills.ts packages/skillproof/src/core/skills.test.ts
 git commit -m "feat: add Code Review and Collaboration skill inference from PR evidence"
 ```
 
@@ -862,7 +862,7 @@ git commit -m "feat: add Code Review and Collaboration skill inference from PR e
 ### Task 7: Update integration test
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/integration.test.ts`
+- Modify: `packages/skillproof/src/commands/integration.test.ts`
 
 **Step 1: Update the integration test**
 
@@ -883,13 +883,13 @@ Add after the scan assertion block (after `assert.ok(manifestAfterScan.evidence.
 
 **Step 2: Run full test suite**
 
-Run: `cd packages/skillproof-cli && npm test 2>&1`
+Run: `cd packages/skillproof && npm test 2>&1`
 Expected: All tests PASS
 
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/integration.test.ts
+git add packages/skillproof/src/commands/integration.test.ts
 git commit -m "test: verify file content hashing and ownership in integration test"
 ```
 

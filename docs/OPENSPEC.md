@@ -157,7 +157,7 @@ skills/
       resume.modern.md
 
 packages/
-  skillproof-cli/
+  skillproof/
     package.json
     tsconfig.json
     src/

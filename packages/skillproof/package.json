@@ -1,6 +1,6 @@
 {
   "name": "skillproof",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Generate verifiable developer resumes from source code",
   "type": "module",
   "main": "dist/index.js",

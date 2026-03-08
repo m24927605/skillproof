@@ -13,14 +13,14 @@
 ### Task 1: Project Scaffolding
 
 **Files:**
-- Create: `packages/skillproof-cli/package.json`
-- Create: `packages/skillproof-cli/tsconfig.json`
+- Create: `packages/skillproof/package.json`
+- Create: `packages/skillproof/tsconfig.json`
 
 **Step 1: Create package.json**
 
 ```json
 {
-  "name": "skillproof-cli",
+  "name": "skillproof",
   "version": "0.1.0",
   "description": "Generate verifiable developer resumes from source code",
   "type": "module",
@@ -68,7 +68,7 @@
 
 **Step 3: Install dependencies**
 
-Run: `cd packages/skillproof-cli && npm install`
+Run: `cd packages/skillproof && npm install`
 Expected: node_modules created, package-lock.json generated
 
 **Step 4: Verify TypeScript compiles**
@@ -85,8 +85,8 @@ Expected: No errors
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/package.json packages/skillproof-cli/tsconfig.json packages/skillproof-cli/package-lock.json packages/skillproof-cli/src/index.ts
-git commit -m "chore: scaffold skillproof-cli package"
+git add packages/skillproof/package.json packages/skillproof/tsconfig.json packages/skillproof/package-lock.json packages/skillproof/src/index.ts
+git commit -m "chore: scaffold skillproof package"
 ```
 
 ---
@@ -94,7 +94,7 @@ git commit -m "chore: scaffold skillproof-cli package"
 ### Task 2: Type Definitions
 
 **Files:**
-- Create: `packages/skillproof-cli/src/types/manifest.ts`
+- Create: `packages/skillproof/src/types/manifest.ts`
 
 **Step 1: Write type definitions**
 
@@ -164,13 +164,13 @@ export interface Manifest {
 
 **Step 2: Verify it compiles**
 
-Run: `cd packages/skillproof-cli && npx tsc --noEmit`
+Run: `cd packages/skillproof && npx tsc --noEmit`
 Expected: No errors
 
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/types/manifest.ts
+git add packages/skillproof/src/types/manifest.ts
 git commit -m "feat: add manifest type definitions"
 ```
 
@@ -179,8 +179,8 @@ git commit -m "feat: add manifest type definitions"
 ### Task 3: Hashing Module
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/hashing.ts`
-- Create: `packages/skillproof-cli/src/core/hashing.test.ts`
+- Create: `packages/skillproof/src/core/hashing.ts`
+- Create: `packages/skillproof/src/core/hashing.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -223,7 +223,7 @@ describe("hashing", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern hashing`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern hashing`
 Expected: FAIL — module not found
 
 **Step 3: Write minimal implementation**
@@ -258,13 +258,13 @@ export function canonicalJson(obj: unknown): string {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern hashing`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern hashing`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/hashing.ts packages/skillproof-cli/src/core/hashing.test.ts
+git add packages/skillproof/src/core/hashing.ts packages/skillproof/src/core/hashing.test.ts
 git commit -m "feat: add hashing module with SHA-256 and canonical JSON"
 ```
 
@@ -273,8 +273,8 @@ git commit -m "feat: add hashing module with SHA-256 and canonical JSON"
 ### Task 4: Security Module
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/security.ts`
-- Create: `packages/skillproof-cli/src/core/security.test.ts`
+- Create: `packages/skillproof/src/core/security.ts`
+- Create: `packages/skillproof/src/core/security.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -328,7 +328,7 @@ describe("security", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern security`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern security`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -370,13 +370,13 @@ export function containsSecrets(content: string): boolean {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern security`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern security`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/security.ts packages/skillproof-cli/src/core/security.test.ts
+git add packages/skillproof/src/core/security.ts packages/skillproof/src/core/security.test.ts
 git commit -m "feat: add security module with sensitive path and secret detection"
 ```
 
@@ -385,8 +385,8 @@ git commit -m "feat: add security module with sensitive path and secret detectio
 ### Task 5: Git Module
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/git.ts`
-- Create: `packages/skillproof-cli/src/core/git.test.ts`
+- Create: `packages/skillproof/src/core/git.ts`
+- Create: `packages/skillproof/src/core/git.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -429,7 +429,7 @@ describe("git", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern git`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern git`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -517,13 +517,13 @@ export async function getTrackedFiles(cwd: string): Promise<string[]> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern git`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern git`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/git.ts packages/skillproof-cli/src/core/git.test.ts
+git add packages/skillproof/src/core/git.ts packages/skillproof/src/core/git.test.ts
 git commit -m "feat: add git module with log parsing and repo queries"
 ```
 
@@ -532,8 +532,8 @@ git commit -m "feat: add git module with log parsing and repo queries"
 ### Task 6: Evidence Module
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/evidence.ts`
-- Create: `packages/skillproof-cli/src/core/evidence.test.ts`
+- Create: `packages/skillproof/src/core/evidence.ts`
+- Create: `packages/skillproof/src/core/evidence.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -587,7 +587,7 @@ describe("evidence", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern evidence`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern evidence`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -674,13 +674,13 @@ export function createSnippetEvidence(
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern evidence`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern evidence`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/evidence.ts packages/skillproof-cli/src/core/evidence.test.ts
+git add packages/skillproof/src/core/evidence.ts packages/skillproof/src/core/evidence.test.ts
 git commit -m "feat: add evidence module with factory functions for all evidence types"
 ```
 
@@ -689,8 +689,8 @@ git commit -m "feat: add evidence module with factory functions for all evidence
 ### Task 7: Manifest Module
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/manifest.ts`
-- Create: `packages/skillproof-cli/src/core/manifest.test.ts`
+- Create: `packages/skillproof/src/core/manifest.ts`
+- Create: `packages/skillproof/src/core/manifest.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -757,7 +757,7 @@ describe("manifest", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern manifest`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern manifest`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -813,13 +813,13 @@ export function getManifestPath(repoRoot: string): string {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern manifest`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern manifest`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/manifest.ts packages/skillproof-cli/src/core/manifest.test.ts
+git add packages/skillproof/src/core/manifest.ts packages/skillproof/src/core/manifest.test.ts
 git commit -m "feat: add manifest module with create, read, write operations"
 ```
 
@@ -828,8 +828,8 @@ git commit -m "feat: add manifest module with create, read, write operations"
 ### Task 8: Skills (Static Signal) Module
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/skills.ts`
-- Create: `packages/skillproof-cli/src/core/skills.test.ts`
+- Create: `packages/skillproof/src/core/skills.ts`
+- Create: `packages/skillproof/src/core/skills.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -911,7 +911,7 @@ describe("skills", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern skills`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern skills`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -992,13 +992,13 @@ export function inferStaticSkills(evidence: Evidence[]): Skill[] {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern skills`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern skills`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/skills.ts packages/skillproof-cli/src/core/skills.test.ts
+git add packages/skillproof/src/core/skills.ts packages/skillproof/src/core/skills.test.ts
 git commit -m "feat: add static skill inference engine with signal rules"
 ```
 
@@ -1007,8 +1007,8 @@ git commit -m "feat: add static skill inference engine with signal rules"
 ### Task 9: Scan Command
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/scan.ts`
-- Create: `packages/skillproof-cli/src/commands/scan.test.ts`
+- Create: `packages/skillproof/src/commands/scan.ts`
+- Create: `packages/skillproof/src/commands/scan.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -1066,7 +1066,7 @@ describe("scan", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern scan`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern scan`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -1226,13 +1226,13 @@ export async function runScan(cwd: string): Promise<void> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern scan`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern scan`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/scan.ts packages/skillproof-cli/src/commands/scan.test.ts
+git add packages/skillproof/src/commands/scan.ts packages/skillproof/src/commands/scan.test.ts
 git commit -m "feat: add scan command with evidence extraction pipeline"
 ```
 
@@ -1241,8 +1241,8 @@ git commit -m "feat: add scan command with evidence extraction pipeline"
 ### Task 10: Infer Command (Static Phase)
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/infer.ts`
-- Create: `packages/skillproof-cli/src/commands/infer.test.ts`
+- Create: `packages/skillproof/src/commands/infer.ts`
+- Create: `packages/skillproof/src/commands/infer.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -1307,7 +1307,7 @@ describe("infer", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern infer`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern infer`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -1358,13 +1358,13 @@ export async function runInfer(cwd: string): Promise<void> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern infer`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern infer`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/infer.ts packages/skillproof-cli/src/commands/infer.test.ts
+git add packages/skillproof/src/commands/infer.ts packages/skillproof/src/commands/infer.test.ts
 git commit -m "feat: add infer command with static skill inference and claim generation"
 ```
 
@@ -1373,8 +1373,8 @@ git commit -m "feat: add infer command with static skill inference and claim gen
 ### Task 11: Render Command
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/render.ts`
-- Create: `packages/skillproof-cli/src/commands/render.test.ts`
+- Create: `packages/skillproof/src/commands/render.ts`
+- Create: `packages/skillproof/src/commands/render.test.ts`
 - Create: `skills/resume/templates/resume.modern.md`
 
 **Step 1: Write the resume template**
@@ -1466,7 +1466,7 @@ describe("render", () => {
 
 **Step 3: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern render`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern render`
 Expected: FAIL
 
 **Step 4: Write minimal implementation**
@@ -1518,13 +1518,13 @@ export async function runRender(cwd: string): Promise<void> {
 
 **Step 5: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern render`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern render`
 Expected: All tests PASS
 
 **Step 6: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/render.ts packages/skillproof-cli/src/commands/render.test.ts skills/resume/templates/resume.modern.md
+git add packages/skillproof/src/commands/render.ts packages/skillproof/src/commands/render.test.ts skills/resume/templates/resume.modern.md
 git commit -m "feat: add render command with resume markdown generation"
 ```
 
@@ -1533,8 +1533,8 @@ git commit -m "feat: add render command with resume markdown generation"
 ### Task 12: Sign Command
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/sign.ts`
-- Create: `packages/skillproof-cli/src/commands/sign.test.ts`
+- Create: `packages/skillproof/src/commands/sign.ts`
+- Create: `packages/skillproof/src/commands/sign.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -1591,7 +1591,7 @@ describe("sign", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern sign`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern sign`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -1686,13 +1686,13 @@ export async function runSign(cwd: string): Promise<void> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern sign`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern sign`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/sign.ts packages/skillproof-cli/src/commands/sign.test.ts
+git add packages/skillproof/src/commands/sign.ts packages/skillproof/src/commands/sign.test.ts
 git commit -m "feat: add sign command with Ed25519 key generation and manifest signing"
 ```
 
@@ -1701,8 +1701,8 @@ git commit -m "feat: add sign command with Ed25519 key generation and manifest s
 ### Task 13: Pack Command
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/pack.ts`
-- Create: `packages/skillproof-cli/src/commands/pack.test.ts`
+- Create: `packages/skillproof/src/commands/pack.ts`
+- Create: `packages/skillproof/src/commands/pack.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -1756,7 +1756,7 @@ describe("pack", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern pack`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern pack`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -1818,13 +1818,13 @@ export async function runPack(cwd: string): Promise<void> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern pack`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern pack`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/pack.ts packages/skillproof-cli/src/commands/pack.test.ts
+git add packages/skillproof/src/commands/pack.ts packages/skillproof/src/commands/pack.test.ts
 git commit -m "feat: add pack command to create distributable resume bundle"
 ```
 
@@ -1833,8 +1833,8 @@ git commit -m "feat: add pack command to create distributable resume bundle"
 ### Task 14: Verify Command
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/verify.ts`
-- Create: `packages/skillproof-cli/src/commands/verify.test.ts`
+- Create: `packages/skillproof/src/commands/verify.ts`
+- Create: `packages/skillproof/src/commands/verify.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -1900,7 +1900,7 @@ describe("verify", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern verify`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern verify`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
@@ -1985,13 +1985,13 @@ export async function runVerify(bundlePath: string): Promise<void> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern verify`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern verify`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/verify.ts packages/skillproof-cli/src/commands/verify.test.ts
+git add packages/skillproof/src/commands/verify.ts packages/skillproof/src/commands/verify.test.ts
 git commit -m "feat: add verify command for bundle signature verification"
 ```
 
@@ -2000,7 +2000,7 @@ git commit -m "feat: add verify command for bundle signature verification"
 ### Task 15: CLI Entry Point
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/index.ts`
+- Modify: `packages/skillproof/src/index.ts`
 
 **Step 1: Write the CLI entry point**
 
@@ -2070,13 +2070,13 @@ program.parse();
 
 **Step 2: Build and verify**
 
-Run: `cd packages/skillproof-cli && npx tsc && node dist/index.js --help`
+Run: `cd packages/skillproof && npx tsc && node dist/index.js --help`
 Expected: Shows help with all 6 commands listed
 
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/index.ts
+git add packages/skillproof/src/index.ts
 git commit -m "feat: add CLI entry point with all commands wired up"
 ```
 
@@ -2215,11 +2215,11 @@ description: Generate verifiable developer resumes from source code repositories
 
 1. Ensure the CLI is built:
    ```bash
-   cd packages/skillproof-cli && npm run build
+   cd packages/skillproof && npm run build
    ```
 2. Run the scan command:
    ```bash
-   cd <repo-root> && node packages/skillproof-cli/dist/index.js scan
+   cd <repo-root> && node packages/skillproof/dist/index.js scan
    ```
 3. Report the results to the user: how many evidence items were found, broken down by type.
 
@@ -2228,7 +2228,7 @@ description: Generate verifiable developer resumes from source code repositories
 1. Ensure the CLI is built.
 2. Run static inference:
    ```bash
-   cd <repo-root> && node packages/skillproof-cli/dist/index.js infer-skills
+   cd <repo-root> && node packages/skillproof/dist/index.js infer-skills
    ```
 3. Read the manifest at `.skillproof/skillproof-manifest.json`.
 4. Analyze the evidence and skills already inferred. Use your reasoning to identify additional skills not caught by static signals:
@@ -2245,7 +2245,7 @@ description: Generate verifiable developer resumes from source code repositories
 1. Ensure the CLI is built.
 2. Run the render command:
    ```bash
-   cd <repo-root> && node packages/skillproof-cli/dist/index.js render
+   cd <repo-root> && node packages/skillproof/dist/index.js render
    ```
 3. Show the user a preview of the generated resume.md.
 
@@ -2254,7 +2254,7 @@ description: Generate verifiable developer resumes from source code repositories
 1. Ensure the CLI is built.
 2. Run the sign command:
    ```bash
-   cd <repo-root> && node packages/skillproof-cli/dist/index.js sign
+   cd <repo-root> && node packages/skillproof/dist/index.js sign
    ```
 3. Confirm to the user that the manifest has been signed.
 
@@ -2263,7 +2263,7 @@ description: Generate verifiable developer resumes from source code repositories
 1. Ensure the CLI is built.
 2. Run the pack command:
    ```bash
-   cd <repo-root> && node packages/skillproof-cli/dist/index.js pack
+   cd <repo-root> && node packages/skillproof/dist/index.js pack
    ```
 3. Confirm the bundle.zip was created and list its contents.
 
@@ -2272,7 +2272,7 @@ description: Generate verifiable developer resumes from source code repositories
 1. Ensure the CLI is built.
 2. Run the verify command:
    ```bash
-   cd <repo-root> && node packages/skillproof-cli/dist/index.js verify bundle.zip
+   cd <repo-root> && node packages/skillproof/dist/index.js verify bundle.zip
    ```
 3. Report the verification results to the user.
 
@@ -2331,7 +2331,7 @@ git commit -m "chore: add .gitignore"
 ### Task 20: Integration Test
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/integration.test.ts`
+- Create: `packages/skillproof/src/commands/integration.test.ts`
 
 **Step 1: Write integration test**
 
@@ -2423,13 +2423,13 @@ describe("integration: full pipeline", () => {
 
 **Step 2: Run integration test**
 
-Run: `cd packages/skillproof-cli && npm test -- --test-name-pattern integration`
+Run: `cd packages/skillproof && npm test -- --test-name-pattern integration`
 Expected: All tests PASS
 
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/integration.test.ts
+git add packages/skillproof/src/commands/integration.test.ts
 git commit -m "test: add full pipeline integration test"
 ```
 

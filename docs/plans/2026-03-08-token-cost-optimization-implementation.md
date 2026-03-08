@@ -13,13 +13,13 @@
 ### Task 1: Remove `improvements` field from code review
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/code-review.ts:4-10` (ReviewResult interface)
-- Modify: `packages/skillproof-cli/src/core/code-review.ts:16-39` (buildReviewPrompt)
-- Modify: `packages/skillproof-cli/src/core/code-review.ts:50-71` (parseReviewResponse)
-- Modify: `packages/skillproof-cli/src/types/manifest.ts:15-23` (Skill interface)
-- Modify: `packages/skillproof-cli/src/commands/infer.ts:144-152` (skill push with improvements)
-- Modify: `packages/skillproof-cli/src/core/code-review.test.ts`
-- Modify: `packages/skillproof-cli/src/commands/infer.test.ts:74-97`
+- Modify: `packages/skillproof/src/core/code-review.ts:4-10` (ReviewResult interface)
+- Modify: `packages/skillproof/src/core/code-review.ts:16-39` (buildReviewPrompt)
+- Modify: `packages/skillproof/src/core/code-review.ts:50-71` (parseReviewResponse)
+- Modify: `packages/skillproof/src/types/manifest.ts:15-23` (Skill interface)
+- Modify: `packages/skillproof/src/commands/infer.ts:144-152` (skill push with improvements)
+- Modify: `packages/skillproof/src/core/code-review.test.ts`
+- Modify: `packages/skillproof/src/commands/infer.test.ts:74-97`
 
 **Step 1: Update test expectations to remove improvements**
 
@@ -60,7 +60,7 @@ it("Skill type accepts strengths and reasoning fields", async () => {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/core/code-review.test.ts' 'src/commands/infer.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/core/code-review.test.ts' 'src/commands/infer.test.ts'`
 Expected: Tests still pass (removing expected fields from test input won't fail yet, but the production code still references improvements)
 
 **Step 3: Remove improvements from ReviewResult and prompt**
@@ -131,13 +131,13 @@ skills.push({
 
 **Step 6: Run tests to verify they pass**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
 Expected: All PASS
 
 **Step 7: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/code-review.ts packages/skillproof-cli/src/core/code-review.test.ts packages/skillproof-cli/src/types/manifest.ts packages/skillproof-cli/src/commands/infer.ts packages/skillproof-cli/src/commands/infer.test.ts
+git add packages/skillproof/src/core/code-review.ts packages/skillproof/src/core/code-review.test.ts packages/skillproof/src/types/manifest.ts packages/skillproof/src/commands/infer.ts packages/skillproof/src/commands/infer.test.ts
 git commit -m "refactor: remove unused improvements field from code review schema"
 ```
 
@@ -146,9 +146,9 @@ git commit -m "refactor: remove unused improvements field from code review schem
 ### Task 2: Add review result caching
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/review-cache.ts`
-- Create: `packages/skillproof-cli/src/core/review-cache.test.ts`
-- Modify: `packages/skillproof-cli/src/commands/infer.ts`
+- Create: `packages/skillproof/src/core/review-cache.ts`
+- Create: `packages/skillproof/src/core/review-cache.test.ts`
+- Modify: `packages/skillproof/src/commands/infer.ts`
 
 **Step 1: Write failing tests for review cache**
 
@@ -222,7 +222,7 @@ describe("review-cache", () => {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/core/review-cache.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/core/review-cache.test.ts'`
 Expected: FAIL — module not found
 
 **Step 3: Implement review-cache.ts**
@@ -275,7 +275,7 @@ export async function saveCachedReview(
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/core/review-cache.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/core/review-cache.test.ts'`
 Expected: All PASS
 
 **Step 5: Integrate cache into infer.ts**
@@ -319,13 +319,13 @@ await saveCachedReview(cwd, cacheKey, review);
 
 **Step 6: Run all tests**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
 Expected: All PASS
 
 **Step 7: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/review-cache.ts packages/skillproof-cli/src/core/review-cache.test.ts packages/skillproof-cli/src/commands/infer.ts
+git add packages/skillproof/src/core/review-cache.ts packages/skillproof/src/core/review-cache.test.ts packages/skillproof/src/commands/infer.ts
 git commit -m "feat: add review result caching to skip LLM calls for unchanged files"
 ```
 
@@ -334,11 +334,11 @@ git commit -m "feat: add review result caching to skip LLM calls for unchanged f
 ### Task 3: Skill grouping for file deduplication
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/skill-grouping.ts`
-- Create: `packages/skillproof-cli/src/core/skill-grouping.test.ts`
-- Modify: `packages/skillproof-cli/src/core/code-review.ts` (support grouped review)
-- Modify: `packages/skillproof-cli/src/core/code-review.test.ts`
-- Modify: `packages/skillproof-cli/src/commands/infer.ts`
+- Create: `packages/skillproof/src/core/skill-grouping.ts`
+- Create: `packages/skillproof/src/core/skill-grouping.test.ts`
+- Modify: `packages/skillproof/src/core/code-review.ts` (support grouped review)
+- Modify: `packages/skillproof/src/core/code-review.test.ts`
+- Modify: `packages/skillproof/src/commands/infer.ts`
 
 **Step 1: Write failing tests for skill grouping**
 
@@ -394,7 +394,7 @@ describe("skill-grouping", () => {
 
 **Step 2: Run tests to verify they fail**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/core/skill-grouping.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/core/skill-grouping.test.ts'`
 Expected: FAIL — module not found
 
 **Step 3: Implement skill-grouping.ts**
@@ -446,7 +446,7 @@ export function groupSkillsByFileOverlap(
 
 **Step 4: Run tests to verify they pass**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/core/skill-grouping.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/core/skill-grouping.test.ts'`
 Expected: All PASS
 
 **Step 5: Add grouped review support to code-review.ts**
@@ -599,13 +599,13 @@ const cacheKey = computeCacheKey(groupSkillName, fileHashes, PROMPT_VERSION);
 
 **Step 8: Run all tests**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
 Expected: All PASS
 
 **Step 9: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/skill-grouping.ts packages/skillproof-cli/src/core/skill-grouping.test.ts packages/skillproof-cli/src/core/code-review.ts packages/skillproof-cli/src/core/code-review.test.ts packages/skillproof-cli/src/commands/infer.ts
+git add packages/skillproof/src/core/skill-grouping.ts packages/skillproof/src/core/skill-grouping.test.ts packages/skillproof/src/core/code-review.ts packages/skillproof/src/core/code-review.test.ts packages/skillproof/src/commands/infer.ts
 git commit -m "feat: group overlapping skills to deduplicate files and reduce token usage"
 ```
 
@@ -614,9 +614,9 @@ git commit -m "feat: group overlapping skills to deduplicate files and reduce to
 ### Task 4: Global token budget with priority ordering and user confirmation
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/infer.ts` (add budget tracking)
-- Modify: `packages/skillproof-cli/src/commands/all.ts` (pass new options)
-- Modify: `packages/skillproof-cli/src/index.ts` (add CLI flag)
+- Modify: `packages/skillproof/src/commands/infer.ts` (add budget tracking)
+- Modify: `packages/skillproof/src/commands/all.ts` (pass new options)
+- Modify: `packages/skillproof/src/index.ts` (add CLI flag)
 
 **Step 1: Add `--max-review-tokens` flag to CLI**
 
@@ -697,13 +697,13 @@ await runInfer(cwd, {
 
 **Step 4: Run all tests**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
 Expected: All PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/infer.ts packages/skillproof-cli/src/commands/all.ts packages/skillproof-cli/src/index.ts
+git add packages/skillproof/src/commands/infer.ts packages/skillproof/src/commands/all.ts packages/skillproof/src/index.ts
 git commit -m "feat: add global token budget with priority ordering and user confirmation"
 ```
 
@@ -712,9 +712,9 @@ git commit -m "feat: add global token budget with priority ordering and user con
 ### Task 5: Pre-review cost estimation
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/token-estimate.ts` (update display for grouped + cached)
-- Modify: `packages/skillproof-cli/src/core/token-estimate.test.ts`
-- Modify: `packages/skillproof-cli/src/commands/infer.ts` (show estimate before review)
+- Modify: `packages/skillproof/src/core/token-estimate.ts` (update display for grouped + cached)
+- Modify: `packages/skillproof/src/core/token-estimate.test.ts`
+- Modify: `packages/skillproof/src/commands/infer.ts` (show estimate before review)
 
 **Step 1: Update cost estimation to support groups and cache hits**
 
@@ -812,13 +812,13 @@ In `index.ts`, add to relevant commands:
 
 **Step 5: Run all tests**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
 Expected: All PASS
 
 **Step 6: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/token-estimate.ts packages/skillproof-cli/src/core/token-estimate.test.ts packages/skillproof-cli/src/commands/infer.ts packages/skillproof-cli/src/index.ts
+git add packages/skillproof/src/core/token-estimate.ts packages/skillproof/src/core/token-estimate.test.ts packages/skillproof/src/commands/infer.ts packages/skillproof/src/index.ts
 git commit -m "feat: add pre-review cost estimation with cache awareness and dry-run mode"
 ```
 
@@ -860,12 +860,12 @@ git commit -m "docs: update gitignore and SKILL.md for token cost optimizations"
 
 **Step 1: Run full test suite**
 
-Run: `cd packages/skillproof-cli && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
+Run: `cd packages/skillproof && node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'`
 Expected: All PASS
 
 **Step 2: Manual smoke test (optional)**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types src/index.ts infer-skills --dry-run`
+Run: `cd packages/skillproof && node --experimental-strip-types src/index.ts infer-skills --dry-run`
 Verify: Cost preview is displayed, no LLM calls made.
 
 **Step 3: Final commit if any adjustments needed**

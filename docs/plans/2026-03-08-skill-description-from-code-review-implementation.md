@@ -13,11 +13,11 @@
 ### Task 1: Extend Skill Type
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/types/manifest.ts:15-19`
+- Modify: `packages/skillproof/src/types/manifest.ts:15-19`
 
 **Step 1: Write the failing test**
 
-Add to `packages/skillproof-cli/src/commands/infer.test.ts`:
+Add to `packages/skillproof/src/commands/infer.test.ts`:
 
 ```typescript
 it("Skill type accepts strengths, improvements, reasoning fields", async () => {
@@ -48,12 +48,12 @@ it("Skill type accepts strengths, improvements, reasoning fields", async () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/infer.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/infer.test.ts`
 Expected: FAIL — TypeScript compile error, `strengths` does not exist on type `Skill`
 
 **Step 3: Write minimal implementation**
 
-In `packages/skillproof-cli/src/types/manifest.ts`, change the Skill interface:
+In `packages/skillproof/src/types/manifest.ts`, change the Skill interface:
 
 ```typescript
 export interface Skill {
@@ -69,13 +69,13 @@ export interface Skill {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/infer.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/infer.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/types/manifest.ts packages/skillproof-cli/src/commands/infer.test.ts
+git add packages/skillproof/src/types/manifest.ts packages/skillproof/src/commands/infer.test.ts
 git commit -m "feat: extend Skill type with strengths, improvements, reasoning"
 ```
 
@@ -84,13 +84,13 @@ git commit -m "feat: extend Skill type with strengths, improvements, reasoning"
 ### Task 2: Integrate Code Review into Infer (file reading + reviewSkill call)
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/infer.ts:56-105` (replace `scoreSkillsWithLLM` with per-skill code review)
-- Read: `packages/skillproof-cli/src/core/code-review.ts` (existing `reviewSkill`)
-- Read: `packages/skillproof-cli/src/core/token-estimate.ts` (existing `FileForReview`, `truncateFileContent`)
+- Modify: `packages/skillproof/src/commands/infer.ts:56-105` (replace `scoreSkillsWithLLM` with per-skill code review)
+- Read: `packages/skillproof/src/core/code-review.ts` (existing `reviewSkill`)
+- Read: `packages/skillproof/src/core/token-estimate.ts` (existing `FileForReview`, `truncateFileContent`)
 
 **Step 1: Write the failing test**
 
-Add to `packages/skillproof-cli/src/commands/infer.test.ts`:
+Add to `packages/skillproof/src/commands/infer.test.ts`:
 
 ```typescript
 import { readFile } from "node:fs/promises";
@@ -117,12 +117,12 @@ it("collectFilesForReview returns files sorted by ownership descending", async (
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/infer.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/infer.test.ts`
 Expected: FAIL — `collectFilesForReview` is not exported
 
 **Step 3: Write minimal implementation**
 
-Add to `packages/skillproof-cli/src/commands/infer.ts`:
+Add to `packages/skillproof/src/commands/infer.ts`:
 
 ```typescript
 import { readFile } from "node:fs/promises";
@@ -146,13 +146,13 @@ export function collectFilesForReview(
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/infer.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/infer.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/infer.ts packages/skillproof-cli/src/commands/infer.test.ts
+git add packages/skillproof/src/commands/infer.ts packages/skillproof/src/commands/infer.test.ts
 git commit -m "feat: add collectFilesForReview sorted by ownership"
 ```
 
@@ -161,11 +161,11 @@ git commit -m "feat: add collectFilesForReview sorted by ownership"
 ### Task 3: Replace scoreSkillsWithLLM with per-skill code review in runInfer
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/infer.ts:122-196` (`runInfer` function)
+- Modify: `packages/skillproof/src/commands/infer.ts:122-196` (`runInfer` function)
 
 **Step 1: Write the failing test**
 
-Add to `packages/skillproof-cli/src/commands/infer.test.ts`:
+Add to `packages/skillproof/src/commands/infer.test.ts`:
 
 ```typescript
 it("runInfer with skipLlm stores empty strengths/improvements/reasoning", async () => {
@@ -202,7 +202,7 @@ it("runInfer with skipLlm stores empty strengths/improvements/reasoning", async 
 
 **Step 2: Run test to verify it passes (baseline — skipLlm path unchanged)**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/infer.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/infer.test.ts`
 Expected: PASS (skipLlm path doesn't set these fields)
 
 **Step 3: Rewrite the LLM path in runInfer**
@@ -278,13 +278,13 @@ Also remove the now-unused `scoreSkillsWithLLM` function and `buildSkillSummary`
 
 **Step 4: Run all infer tests**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/infer.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/infer.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/infer.ts
+git add packages/skillproof/src/commands/infer.ts
 git commit -m "feat: replace scoreSkillsWithLLM with per-skill code review"
 ```
 
@@ -293,12 +293,12 @@ git commit -m "feat: replace scoreSkillsWithLLM with per-skill code review"
 ### Task 4: Update LLM Render Prompt to Include Strengths + Reasoning
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/llm.ts:14-63`
-- Test: `packages/skillproof-cli/src/core/llm.test.ts`
+- Modify: `packages/skillproof/src/core/llm.ts:14-63`
+- Test: `packages/skillproof/src/core/llm.test.ts`
 
 **Step 1: Write the failing test**
 
-Add to `packages/skillproof-cli/src/core/llm.test.ts`:
+Add to `packages/skillproof/src/core/llm.test.ts`:
 
 ```typescript
 it("includes strengths and reasoning in user message when available", () => {
@@ -343,12 +343,12 @@ it("does not include improvements in user message", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/core/llm.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/core/llm.test.ts`
 Expected: FAIL — strengths not included in user message
 
 **Step 3: Write minimal implementation**
 
-In `packages/skillproof-cli/src/core/llm.ts`, update `buildPromptMessages` — change the `skillLines` mapping:
+In `packages/skillproof/src/core/llm.ts`, update `buildPromptMessages` — change the `skillLines` mapping:
 
 ```typescript
 const skillLines = skills
@@ -387,13 +387,13 @@ Rules:
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/core/llm.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/core/llm.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/llm.ts packages/skillproof-cli/src/core/llm.test.ts
+git add packages/skillproof/src/core/llm.ts packages/skillproof/src/core/llm.test.ts
 git commit -m "feat: include strengths and reasoning in LLM render prompt"
 ```
 
@@ -402,12 +402,12 @@ git commit -m "feat: include strengths and reasoning in LLM render prompt"
 ### Task 5: Update Non-LLM Render to Show Strengths
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/render.ts:23-54` (`renderResume`)
-- Test: `packages/skillproof-cli/src/commands/render.test.ts`
+- Modify: `packages/skillproof/src/commands/render.ts:23-54` (`renderResume`)
+- Test: `packages/skillproof/src/commands/render.test.ts`
 
 **Step 1: Write the failing test**
 
-Add to `packages/skillproof-cli/src/commands/render.test.ts`:
+Add to `packages/skillproof/src/commands/render.test.ts`:
 
 ```typescript
 it("displays strengths when available", () => {
@@ -463,12 +463,12 @@ it("does not display improvements in resume", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/render.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/render.test.ts`
 Expected: FAIL — strengths not in output
 
 **Step 3: Write minimal implementation**
 
-In `packages/skillproof-cli/src/commands/render.ts`, update `renderResume`:
+In `packages/skillproof/src/commands/render.ts`, update `renderResume`:
 
 ```typescript
 for (const skill of skills) {
@@ -488,13 +488,13 @@ for (const skill of skills) {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/render.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/render.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/render.ts packages/skillproof-cli/src/commands/render.test.ts
+git add packages/skillproof/src/commands/render.ts packages/skillproof/src/commands/render.test.ts
 git commit -m "feat: display strengths in non-LLM resume render"
 ```
 
@@ -609,7 +609,7 @@ git commit -m "docs: add strengths to resume template"
 **Step 1: Run all tests**
 
 ```bash
-cd packages/skillproof-cli && node --experimental-strip-types --test src/**/*.test.ts
+cd packages/skillproof && node --experimental-strip-types --test src/**/*.test.ts
 ```
 
 Expected: ALL PASS

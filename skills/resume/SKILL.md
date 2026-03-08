@@ -9,7 +9,7 @@ description: Generate verifiable developer resumes from source code repositories
 - `node` >= 22 installed (for Ed25519 crypto)
 - `gh` installed and authenticated (optional, for GitHub PR evidence)
 
-The `skillproof-all` procedure calls the local `skillproof-cli` Node.js package for non-interactive pipeline execution. Claude Code handles user interaction and invokes the CLI with appropriate flags.
+The `skillproof-all` procedure calls the local `skillproof` Node.js package for non-interactive pipeline execution. Claude Code handles user interaction and invokes the CLI with appropriate flags.
 
 ## Data Locations
 
@@ -363,13 +363,13 @@ The user can type:
    a. Ask for the parent directory path (default: current directory).
    b. Discover repos by running:
       ```bash
-      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts list-repos --path "<parent_dir>"
+      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts list-repos --path "<parent_dir>"
       ```
       This outputs a JSON array of repo names.
    c. Output the COMPLETE numbered list of repos as plain text (sorted alphabetically, one per line). Then use AskUserQuestion to ask which repos to include. The user types numbers, ranges (e.g. `1,3,5-10`), repo names, or `all`.
    d. Collect emails by running the CLI command (do NOT use `git config` — it misses committer emails):
       ```bash
-      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts list-emails --path "<parent_dir>" --repos "<repo1>,<repo2>,..."
+      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts list-emails --path "<parent_dir>" --repos "<repo1>,<repo2>,..."
       ```
       This outputs a JSON array of all unique emails (author + committer) from git log. Present all emails to the user to confirm which are theirs.
 
@@ -383,7 +383,7 @@ Run the CLI with all flags so it skips all interactive prompts:
 
 For current project:
 ```bash
-node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts all \
+node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts all \
   --scan-mode current \
   --locale "<locale>" --format "<format>" -o "<output>" \
   --max-review-tokens 200000 --yes
@@ -391,7 +391,7 @@ node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packa
 
 For multiple local projects:
 ```bash
-node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts all \
+node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts all \
   --scan-mode local-multi \
   --parent-dir "<parent_dir>" \
   --repos "<repo1>,<repo2>,<repo3>" \

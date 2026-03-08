@@ -90,11 +90,11 @@ Proceed? [Y/n]
 
 ## Files to Modify
 
-- `packages/skillproof-cli/src/commands/infer.ts` — caching, grouping, budget, cost preview
-- `packages/skillproof-cli/src/commands/all.ts` — pass new flags, integrate cost preview
-- `packages/skillproof-cli/src/core/code-review.ts` — remove improvements, support grouped review
-- `packages/skillproof-cli/src/core/token-estimate.ts` — cost preview calculation
-- `packages/skillproof-cli/src/core/skills.ts` — skill grouping logic
-- `packages/skillproof-cli/src/index.ts` — new CLI flags
+- `packages/skillproof/src/commands/infer.ts` — caching, grouping, budget, cost preview
+- `packages/skillproof/src/commands/all.ts` — pass new flags, integrate cost preview
+- `packages/skillproof/src/core/code-review.ts` — remove improvements, support grouped review
+- `packages/skillproof/src/core/token-estimate.ts` — cost preview calculation
+- `packages/skillproof/src/core/skills.ts` — skill grouping logic
+- `packages/skillproof/src/index.ts` — new CLI flags
 - `skills/resume/SKILL.md` — update documentation
 - `.gitignore` — add `.skillproof/cache/`

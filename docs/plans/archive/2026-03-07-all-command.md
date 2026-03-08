@@ -13,7 +13,7 @@
 ### Task 1: Write failing test for `runAll`
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/all.test.ts`
+- Create: `packages/skillproof/src/commands/all.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -76,7 +76,7 @@ describe("runAll", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/all.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/all.test.ts`
 Expected: FAIL — cannot find `./all.ts`
 
 ---
@@ -84,7 +84,7 @@ Expected: FAIL — cannot find `./all.ts`
 ### Task 2: Implement `runAll`
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/all.ts`
+- Create: `packages/skillproof/src/commands/all.ts`
 
 **Step 1: Write minimal implementation**
 
@@ -144,13 +144,13 @@ export async function runAll(
 
 **Step 2: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types --test src/commands/all.test.ts`
+Run: `cd packages/skillproof && node --experimental-strip-types --test src/commands/all.test.ts`
 Expected: PASS
 
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/all.ts packages/skillproof-cli/src/commands/all.test.ts
+git add packages/skillproof/src/commands/all.ts packages/skillproof/src/commands/all.test.ts
 git commit -m "feat: add runAll pipeline function with test"
 ```
 
@@ -159,7 +159,7 @@ git commit -m "feat: add runAll pipeline function with test"
 ### Task 3: Register `all` command in CLI
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/index.ts`
+- Modify: `packages/skillproof/src/index.ts`
 
 **Step 1: Add import and command registration**
 
@@ -182,16 +182,16 @@ Update version from `"0.1.4"` to `"0.1.7"`.
 
 **Step 2: Update package.json version**
 
-Change version in `packages/skillproof-cli/package.json` to `"0.1.7"`.
+Change version in `packages/skillproof/package.json` to `"0.1.7"`.
 
 **Step 3: Verify CLI works**
 
-Run: `cd packages/skillproof-cli && node --experimental-strip-types src/index.ts all --help`
+Run: `cd packages/skillproof && node --experimental-strip-types src/index.ts all --help`
 Expected: Shows "Run full pipeline: scan → infer → render → sign → pack → verify"
 
 **Step 4: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/index.ts packages/skillproof-cli/package.json
+git add packages/skillproof/src/index.ts packages/skillproof/package.json
 git commit -m "feat: register all command in CLI, bump to 0.1.7"
 ```

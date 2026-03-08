@@ -20,7 +20,7 @@ Claude Code Plugin (slash commands + SKILL.md)
         |
         | invokes via bash
         v
-TypeScript CLI (skillproof-cli)
+TypeScript CLI (skillproof)
         |
         | reads/writes
         v
@@ -43,7 +43,7 @@ skillproof/
 ├── skills/resume/
 │   ├── SKILL.md
 │   └── templates/resume.modern.md
-├── packages/skillproof-cli/
+├── packages/skillproof/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/

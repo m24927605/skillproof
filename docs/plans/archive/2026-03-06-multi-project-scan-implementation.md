@@ -13,12 +13,12 @@
 ### Task 1: Add `@inquirer/prompts` dependency
 
 **Files:**
-- Modify: `packages/skillproof-cli/package.json`
+- Modify: `packages/skillproof/package.json`
 
 **Step 1: Install**
 
 ```bash
-cd packages/skillproof-cli && npm install @inquirer/prompts
+cd packages/skillproof && npm install @inquirer/prompts
 ```
 
 **Step 2: Verify**
@@ -32,7 +32,7 @@ Expected: `OK`
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/package.json packages/skillproof-cli/package-lock.json
+git add packages/skillproof/package.json packages/skillproof/package-lock.json
 git commit -m "chore: add @inquirer/prompts dependency"
 ```
 
@@ -41,7 +41,7 @@ git commit -m "chore: add @inquirer/prompts dependency"
 ### Task 2: Extend `types/manifest.ts` — add multi-repo and multi-email fields
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/types/manifest.ts`
+- Modify: `packages/skillproof/src/types/manifest.ts`
 
 **Step 1: Add new fields**
 
@@ -83,7 +83,7 @@ export interface Manifest {
 **Step 2: Run tests to verify backward compatibility**
 
 ```bash
-cd packages/skillproof-cli && npm test
+cd packages/skillproof && npm test
 ```
 
 Expected: All 71 tests still pass (all new fields are optional)
@@ -91,7 +91,7 @@ Expected: All 71 tests still pass (all new fields are optional)
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/types/manifest.ts
+git add packages/skillproof/src/types/manifest.ts
 git commit -m "feat(types): add multi-email and multi-repo fields to manifest"
 ```
 
@@ -100,11 +100,11 @@ git commit -m "feat(types): add multi-email and multi-repo fields to manifest"
 ### Task 3: Add `checkboxPrompt` to `core/prompt.ts`
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/prompt.ts`
+- Modify: `packages/skillproof/src/core/prompt.ts`
 
 **Step 1: Add the checkbox function**
 
-Append to the end of `packages/skillproof-cli/src/core/prompt.ts`:
+Append to the end of `packages/skillproof/src/core/prompt.ts`:
 
 ```typescript
 import { checkbox } from "@inquirer/prompts";
@@ -122,7 +122,7 @@ Note: You'll also need to keep the existing `readline` import at the top. The fi
 **Step 2: Build to verify no compile errors**
 
 ```bash
-cd packages/skillproof-cli && npm run build
+cd packages/skillproof && npm run build
 ```
 
 Expected: Clean build
@@ -130,7 +130,7 @@ Expected: Clean build
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/prompt.ts
+git add packages/skillproof/src/core/prompt.ts
 git commit -m "feat(prompt): add interactive checkbox prompt using @inquirer/prompts"
 ```
 
@@ -139,12 +139,12 @@ git commit -m "feat(prompt): add interactive checkbox prompt using @inquirer/pro
 ### Task 4: Create `core/identity.ts` — developer email collection
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/identity.ts`
-- Create: `packages/skillproof-cli/src/core/identity.test.ts`
+- Create: `packages/skillproof/src/core/identity.ts`
+- Create: `packages/skillproof/src/core/identity.test.ts`
 
 **Step 1: Write the failing tests**
 
-Create `packages/skillproof-cli/src/core/identity.test.ts`:
+Create `packages/skillproof/src/core/identity.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -197,14 +197,14 @@ describe("identity", () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/skillproof-cli && npm test 2>&1 | grep -E "(identity|FAIL|Error)"
+cd packages/skillproof && npm test 2>&1 | grep -E "(identity|FAIL|Error)"
 ```
 
 Expected: FAIL — module not found
 
 **Step 3: Write implementation**
 
-Create `packages/skillproof-cli/src/core/identity.ts`:
+Create `packages/skillproof/src/core/identity.ts`:
 
 ```typescript
 import { execFile } from "node:child_process";
@@ -299,7 +299,7 @@ export async function collectAllEmails(
 **Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/skillproof-cli && npm test 2>&1 | grep -E "(identity|FAIL|PASS)"
+cd packages/skillproof && npm test 2>&1 | grep -E "(identity|FAIL|PASS)"
 ```
 
 Expected: All identity tests PASS
@@ -307,7 +307,7 @@ Expected: All identity tests PASS
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/identity.ts packages/skillproof-cli/src/core/identity.test.ts
+git add packages/skillproof/src/core/identity.ts packages/skillproof/src/core/identity.test.ts
 git commit -m "feat(identity): add multi-email developer identity collection"
 ```
 
@@ -316,12 +316,12 @@ git commit -m "feat(identity): add multi-email developer identity collection"
 ### Task 5: Create `core/github.ts` — GitHub repo listing
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/github.ts`
-- Create: `packages/skillproof-cli/src/core/github.test.ts`
+- Create: `packages/skillproof/src/core/github.ts`
+- Create: `packages/skillproof/src/core/github.test.ts`
 
 **Step 1: Write the failing tests**
 
-Create `packages/skillproof-cli/src/core/github.test.ts`:
+Create `packages/skillproof/src/core/github.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -363,14 +363,14 @@ describe("github", () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/skillproof-cli && npm test 2>&1 | grep -E "(github|FAIL|Error)"
+cd packages/skillproof && npm test 2>&1 | grep -E "(github|FAIL|Error)"
 ```
 
 Expected: FAIL — module not found
 
 **Step 3: Write implementation**
 
-Create `packages/skillproof-cli/src/core/github.ts`:
+Create `packages/skillproof/src/core/github.ts`:
 
 ```typescript
 import { execFile } from "node:child_process";
@@ -489,7 +489,7 @@ export async function fetchGitHubRepos(
 **Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/skillproof-cli && npm test 2>&1 | grep -E "(github|FAIL|PASS)"
+cd packages/skillproof && npm test 2>&1 | grep -E "(github|FAIL|PASS)"
 ```
 
 Expected: All github tests PASS
@@ -497,7 +497,7 @@ Expected: All github tests PASS
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/github.ts packages/skillproof-cli/src/core/github.test.ts
+git add packages/skillproof/src/core/github.ts packages/skillproof/src/core/github.test.ts
 git commit -m "feat(github): add GitHub repo listing with multi-source support"
 ```
 
@@ -506,12 +506,12 @@ git commit -m "feat(github): add GitHub repo listing with multi-source support"
 ### Task 6: Create `core/merge.ts` — evidence merging
 
 **Files:**
-- Create: `packages/skillproof-cli/src/core/merge.ts`
-- Create: `packages/skillproof-cli/src/core/merge.test.ts`
+- Create: `packages/skillproof/src/core/merge.ts`
+- Create: `packages/skillproof/src/core/merge.test.ts`
 
 **Step 1: Write the failing tests**
 
-Create `packages/skillproof-cli/src/core/merge.test.ts`:
+Create `packages/skillproof/src/core/merge.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -599,14 +599,14 @@ describe("merge", () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/skillproof-cli && npm test 2>&1 | grep -E "(merge|FAIL|Error)"
+cd packages/skillproof && npm test 2>&1 | grep -E "(merge|FAIL|Error)"
 ```
 
 Expected: FAIL — module not found
 
 **Step 3: Write implementation**
 
-Create `packages/skillproof-cli/src/core/merge.ts`:
+Create `packages/skillproof/src/core/merge.ts`:
 
 ```typescript
 import type { Evidence, Skill, Manifest, RepoEntry } from "../types/manifest.ts";
@@ -680,7 +680,7 @@ export function mergeManifests(
 **Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/skillproof-cli && npm test 2>&1 | grep -E "(merge|FAIL|PASS)"
+cd packages/skillproof && npm test 2>&1 | grep -E "(merge|FAIL|PASS)"
 ```
 
 Expected: All merge tests PASS
@@ -688,7 +688,7 @@ Expected: All merge tests PASS
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/merge.ts packages/skillproof-cli/src/core/merge.test.ts
+git add packages/skillproof/src/core/merge.ts packages/skillproof/src/core/merge.test.ts
 git commit -m "feat(merge): add evidence and skill merging for multi-repo manifests"
 ```
 
@@ -697,7 +697,7 @@ git commit -m "feat(merge): add evidence and skill merging for multi-repo manife
 ### Task 7: Refactor `commands/scan.ts` — extract reusable `scanRepo()`
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/scan.ts`
+- Modify: `packages/skillproof/src/commands/scan.ts`
 
 **Step 1: Extract `scanRepo` function**
 
@@ -842,7 +842,7 @@ export async function runScan(cwd: string): Promise<void> {
 **Step 2: Run tests to verify nothing broke**
 
 ```bash
-cd packages/skillproof-cli && npm test
+cd packages/skillproof && npm test
 ```
 
 Expected: All tests pass (same behavior, just refactored)
@@ -850,7 +850,7 @@ Expected: All tests pass (same behavior, just refactored)
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/scan.ts
+git add packages/skillproof/src/commands/scan.ts
 git commit -m "refactor(scan): extract reusable scanRepo function for multi-project support"
 ```
 
@@ -859,11 +859,11 @@ git commit -m "refactor(scan): extract reusable scanRepo function for multi-proj
 ### Task 8: Create `commands/scan-multi.ts` — main command
 
 **Files:**
-- Create: `packages/skillproof-cli/src/commands/scan-multi.ts`
+- Create: `packages/skillproof/src/commands/scan-multi.ts`
 
 **Step 1: Write the full scan-multi command**
 
-Create `packages/skillproof-cli/src/commands/scan-multi.ts`:
+Create `packages/skillproof/src/commands/scan-multi.ts`:
 
 ```typescript
 import { readdir, stat, rm, mkdir } from "node:fs/promises";
@@ -1164,7 +1164,7 @@ export async function runScanMulti(cwd: string, github: boolean): Promise<void> 
 **Step 2: Build to verify compilation**
 
 ```bash
-cd packages/skillproof-cli && npm run build
+cd packages/skillproof && npm run build
 ```
 
 Expected: Clean build
@@ -1172,7 +1172,7 @@ Expected: Clean build
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/scan-multi.ts
+git add packages/skillproof/src/commands/scan-multi.ts
 git commit -m "feat(scan-multi): add multi-project scanning with local and GitHub modes"
 ```
 
@@ -1181,7 +1181,7 @@ git commit -m "feat(scan-multi): add multi-project scanning with local and GitHu
 ### Task 9: Register `scan-multi` in `src/index.ts`
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/index.ts`
+- Modify: `packages/skillproof/src/index.ts`
 
 **Step 1: Add import and command registration**
 
@@ -1206,7 +1206,7 @@ program
 **Step 2: Build and verify help**
 
 ```bash
-cd packages/skillproof-cli && npm run build && node dist/index.js scan-multi --help
+cd packages/skillproof && npm run build && node dist/index.js scan-multi --help
 ```
 
 Expected: Should show description and `--github` option
@@ -1214,7 +1214,7 @@ Expected: Should show description and `--github` option
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/index.ts
+git add packages/skillproof/src/index.ts
 git commit -m "feat(cli): register scan-multi command with --github option"
 ```
 
@@ -1225,7 +1225,7 @@ git commit -m "feat(cli): register scan-multi command with --github option"
 **Step 1: Build**
 
 ```bash
-cd packages/skillproof-cli && npm run build
+cd packages/skillproof && npm run build
 ```
 
 Expected: Clean build, no errors
@@ -1233,7 +1233,7 @@ Expected: Clean build, no errors
 **Step 2: Run all tests**
 
 ```bash
-cd packages/skillproof-cli && npm test
+cd packages/skillproof && npm test
 ```
 
 Expected: All tests pass (existing + new identity, github, merge tests)

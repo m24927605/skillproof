@@ -13,8 +13,8 @@
 ### Task 1: Fix PR author filtering in getAuthorPRs
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/git.ts:173-189`
-- Test: `packages/skillproof-cli/src/core/git.test.ts`
+- Modify: `packages/skillproof/src/core/git.ts:173-189`
+- Test: `packages/skillproof/src/core/git.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -67,7 +67,7 @@ it("parseGitHubPRs returns all merged when no author filter", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/core/git.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/core/git.test.ts`
 Expected: FAIL — `parseGitHubPRs` doesn't accept a second argument
 
 **Step 3: Implement the fix**
@@ -121,13 +121,13 @@ export async function getAuthorPRs(
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/core/git.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/core/git.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/git.ts packages/skillproof-cli/src/core/git.test.ts
+git add packages/skillproof/src/core/git.ts packages/skillproof/src/core/git.test.ts
 git commit -m "fix: filter PR evidence by author login"
 ```
 
@@ -136,9 +136,9 @@ git commit -m "fix: filter PR evidence by author login"
 ### Task 2: Add resume.md integrity check to verify
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/pack.ts:19-24`
-- Modify: `packages/skillproof-cli/src/commands/verify.ts:18-54`
-- Test: `packages/skillproof-cli/src/commands/verify.test.ts`
+- Modify: `packages/skillproof/src/commands/pack.ts:19-24`
+- Modify: `packages/skillproof/src/commands/verify.ts:18-54`
+- Test: `packages/skillproof/src/commands/verify.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -199,7 +199,7 @@ it("detects tampered resume.md", async () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/verify.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/verify.test.ts`
 Expected: FAIL — `resumeTampered` property doesn't exist
 
 **Step 3: Implement the fix**
@@ -295,13 +295,13 @@ if (result.resumeTampered) {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/verify.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/verify.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/pack.ts packages/skillproof-cli/src/commands/verify.ts packages/skillproof-cli/src/commands/verify.test.ts
+git add packages/skillproof/src/commands/pack.ts packages/skillproof/src/commands/verify.ts packages/skillproof/src/commands/verify.test.ts
 git commit -m "fix: verify resume.md integrity via verification.json hash"
 ```
 
@@ -310,8 +310,8 @@ git commit -m "fix: verify resume.md integrity via verification.json hash"
 ### Task 3: Fix parseRepoFromRemote to handle dots in repo names
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/core/git.ts:123-131`
-- Test: `packages/skillproof-cli/src/core/git.test.ts`
+- Modify: `packages/skillproof/src/core/git.ts:123-131`
+- Test: `packages/skillproof/src/core/git.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -336,7 +336,7 @@ it("parses HTTPS without .git suffix", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/core/git.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/core/git.test.ts`
 Expected: FAIL — repo name truncated to "my"
 
 **Step 3: Implement the fix**
@@ -357,13 +357,13 @@ export function parseRepoFromRemote(remoteUrl: string): RepoId | null {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/core/git.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/core/git.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/core/git.ts packages/skillproof-cli/src/core/git.test.ts
+git add packages/skillproof/src/core/git.ts packages/skillproof/src/core/git.test.ts
 git commit -m "fix: handle dots in GitHub repo names"
 ```
 
@@ -372,8 +372,8 @@ git commit -m "fix: handle dots in GitHub repo names"
 ### Task 4: Fix Cargo.toml dependency parser to be section-aware
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/scan.ts:99-102`
-- Test: `packages/skillproof-cli/src/commands/scan.test.ts`
+- Modify: `packages/skillproof/src/commands/scan.ts:99-102`
+- Test: `packages/skillproof/src/commands/scan.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -417,7 +417,7 @@ describe("DEPENDENCY_FILES parsers", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/scan.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/scan.test.ts`
 Expected: FAIL — `parseCargoDeps` not exported
 
 **Step 3: Implement the fix**
@@ -456,13 +456,13 @@ Update the `DEPENDENCY_FILES` map entry:
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/scan.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/scan.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/scan.ts packages/skillproof-cli/src/commands/scan.test.ts
+git add packages/skillproof/src/commands/scan.ts packages/skillproof/src/commands/scan.test.ts
 git commit -m "fix: Cargo.toml parser only extracts dependency sections"
 ```
 
@@ -471,8 +471,8 @@ git commit -m "fix: Cargo.toml parser only extracts dependency sections"
 ### Task 5: Wire containsSecrets() into scan file reading
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/scan.ts:206-214`
-- Test: `packages/skillproof-cli/src/commands/scan.test.ts`
+- Modify: `packages/skillproof/src/commands/scan.ts:206-214`
+- Test: `packages/skillproof/src/commands/scan.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -499,7 +499,7 @@ it("excludes files containing secrets from evidence", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/scan.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/scan.test.ts`
 Expected: FAIL — both files included (containsSecrets not called in buildEvidence)
 
 **Step 3: Implement the fix**
@@ -522,13 +522,13 @@ for (const file of input.files) {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/scan.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/scan.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/scan.ts packages/skillproof-cli/src/commands/scan.test.ts
+git add packages/skillproof/src/commands/scan.ts packages/skillproof/src/commands/scan.test.ts
 git commit -m "fix: wire containsSecrets() into evidence collection"
 ```
 
@@ -537,8 +537,8 @@ git commit -m "fix: wire containsSecrets() into evidence collection"
 ### Task 6: Fix scan-multi to recursively discover repos
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/scan-multi.ts:21-41`
-- Test: `packages/skillproof-cli/src/commands/scan-multi.test.ts`
+- Modify: `packages/skillproof/src/commands/scan-multi.ts:21-41`
+- Test: `packages/skillproof/src/commands/scan-multi.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -569,7 +569,7 @@ it("finds nested git repos (not just one level)", async () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/scan-multi.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/scan-multi.test.ts`
 Expected: FAIL — `discoverLocalRepos` not exported, and only finds one level
 
 **Step 3: Implement the fix**
@@ -618,13 +618,13 @@ export async function discoverLocalRepos(parentDir: string): Promise<LocalRepo[]
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/scan-multi.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/scan-multi.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/scan-multi.ts packages/skillproof-cli/src/commands/scan-multi.test.ts
+git add packages/skillproof/src/commands/scan-multi.ts packages/skillproof/src/commands/scan-multi.test.ts
 git commit -m "fix: scan-multi recursively discovers nested git repos"
 ```
 
@@ -633,8 +633,8 @@ git commit -m "fix: scan-multi recursively discovers nested git repos"
 ### Task 7: Auto-detect rendered files in pack
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/pack.ts:8-50`
-- Test: `packages/skillproof-cli/src/commands/pack.test.ts`
+- Modify: `packages/skillproof/src/commands/pack.ts:8-50`
+- Test: `packages/skillproof/src/commands/pack.test.ts`
 
 **Step 1: Write the failing test**
 
@@ -671,7 +671,7 @@ it("includes rendered resume files (pdf/png) in bundle", async () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/pack.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/pack.test.ts`
 Expected: FAIL — resume.pdf not in bundle
 
 **Step 3: Implement the fix**
@@ -761,13 +761,13 @@ export async function runPack(cwd: string): Promise<void> {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/pack.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/pack.test.ts`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/pack.ts packages/skillproof-cli/src/commands/pack.test.ts
+git add packages/skillproof/src/commands/pack.ts packages/skillproof/src/commands/pack.test.ts
 git commit -m "fix: pack auto-includes rendered resume files (pdf/png/jpeg)"
 ```
 
@@ -776,8 +776,8 @@ git commit -m "fix: pack auto-includes rendered resume files (pdf/png/jpeg)"
 ### Task 8: Add CI-friendly flags to render command
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/render.ts:60-103`
-- Modify: `packages/skillproof-cli/src/index.ts:36-45`
+- Modify: `packages/skillproof/src/commands/render.ts:60-103`
+- Modify: `packages/skillproof/src/index.ts:36-45`
 
 **Step 1: Add CLI options in index.ts**
 
@@ -838,13 +838,13 @@ if (options?.personalInfo !== undefined) {
 
 **Step 3: Run tests**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/render.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/render.test.ts`
 Expected: PASS (existing tests don't call runRender, only renderResume)
 
 **Step 4: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/render.ts packages/skillproof-cli/src/index.ts
+git add packages/skillproof/src/commands/render.ts packages/skillproof/src/index.ts
 git commit -m "feat: add --api-key, --personal-info, --yes flags to render for CI"
 ```
 
@@ -853,7 +853,7 @@ git commit -m "feat: add --api-key, --personal-info, --yes flags to render for C
 ### Task 9: Fix inferred_by label to use "static" for rule-based detection
 
 **Files:**
-- Modify: `packages/skillproof-cli/src/commands/infer.ts:45`
+- Modify: `packages/skillproof/src/commands/infer.ts:45`
 
 **Step 1: Fix the label**
 
@@ -871,13 +871,13 @@ inferred_by: "static" as const,
 
 **Step 2: Run tests**
 
-Run: `cd packages/skillproof-cli && npx tsx --test src/commands/infer.test.ts`
+Run: `cd packages/skillproof && npx tsx --test src/commands/infer.test.ts`
 Expected: PASS
 
 **Step 3: Commit**
 
 ```bash
-git add packages/skillproof-cli/src/commands/infer.ts
+git add packages/skillproof/src/commands/infer.ts
 git commit -m "fix: inferred_by uses 'static' for rule-based detection"
 ```
 
@@ -887,7 +887,7 @@ git commit -m "fix: inferred_by uses 'static' for rule-based detection"
 
 **Step 1: Run all tests**
 
-Run: `cd packages/skillproof-cli && npm test`
+Run: `cd packages/skillproof && npm test`
 Expected: All tests pass
 
 **Step 2: Squash commits**

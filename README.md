@@ -32,7 +32,7 @@ Clone the repo and install as a local plugin:
 
 ```bash
 git clone https://github.com/m24927605/skillproof.git
-cd skillproof/packages/skillproof-cli
+cd skillproof/packages/skillproof
 npm install && npm run build
 ```
 
@@ -45,7 +45,7 @@ Then in Claude Code, add the plugin from the cloned directory:
 ### Standalone CLI (npm)
 
 ```bash
-npm install -g skillproof-cli
+npm install -g skillproof
 
 # Run full pipeline in any git repository
 skillproof all
@@ -63,7 +63,7 @@ skillproof verify bundle.zip
 
 ```bash
 git clone https://github.com/m24927605/skillproof.git
-cd skillproof/packages/skillproof-cli
+cd skillproof/packages/skillproof
 npm install && npm run build
 npx skillproof doctor
 ```
@@ -163,7 +163,7 @@ Claude Code Plugin (slash commands + SKILL.md)
         |
         | orchestrates via bash
         v
-TypeScript CLI (skillproof-cli)
+TypeScript CLI (skillproof)
         |
         | reads/writes
         v
@@ -190,7 +190,7 @@ skillproof/
 ├── skills/resume/
 │   ├── SKILL.md                      # Skill procedures
 │   └── templates/resume.modern.md    # Resume template
-├── packages/skillproof-cli/
+├── packages/skillproof/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
@@ -206,7 +206,7 @@ skillproof/
 ## Testing
 
 ```bash
-cd packages/skillproof-cli
+cd packages/skillproof
 npm test
 ```
 
