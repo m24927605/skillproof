@@ -13,8 +13,10 @@ import { groupSkillsByFileOverlap } from "../core/skill-grouping.ts";
 import type { SkillGroup } from "../core/skill-grouping.ts";
 import type { FileForReview } from "../core/token-estimate.ts";
 import type { Claim, Evidence, Skill } from "../types/manifest.ts";
+import type { ReviewResult } from "../core/code-review.ts";
 
 const TOKEN_BUDGET_PER_SKILL = 50_000;
+const MAX_INPUT_TOKENS_PER_REQUEST = 25_000;
 
 interface GroupPlan {
   group: SkillGroup;
@@ -23,6 +25,82 @@ interface GroupPlan {
   fileHashes: string[];
   cacheKey: string;
   cached: boolean;
+}
+
+export function splitFilesIntoBatches(
+  files: FileForReview[],
+  maxTokensPerBatch: number = MAX_INPUT_TOKENS_PER_REQUEST,
+): FileForReview[][] {
+  const batches: FileForReview[][] = [];
+  let currentBatch: FileForReview[] = [];
+  let currentTokens = 0;
+
+  for (const file of files) {
+    const fileTokens = estimateTokens(file.content);
+
+    if (currentBatch.length > 0 && currentTokens + fileTokens > maxTokensPerBatch) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentTokens = 0;
+    }
+
+    currentBatch.push(file);
+    currentTokens += fileTokens;
+  }
+
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+
+  return batches;
+}
+
+export function mergeReviewResults(skill: string, reviews: ReviewResult[]): ReviewResult {
+  if (reviews.length === 0) {
+    return { skill, quality_score: 0, reasoning: "", strengths: [] };
+  }
+
+  const averageScore = reviews.reduce((sum, review) => sum + review.quality_score, 0) / reviews.length;
+  const reasoning = reviews
+    .map((review) => review.reasoning.trim())
+    .filter(Boolean)
+    .join(" ");
+  const strengths = [...new Set(reviews.flatMap((review) => review.strengths.map((strength) => strength.trim()).filter(Boolean)))].slice(0, 4);
+
+  return {
+    skill,
+    quality_score: Math.round(averageScore * 100) / 100,
+    reasoning,
+    strengths,
+  };
+}
+
+async function reviewGroupWithBatches(
+  apiKey: string,
+  skills: string[],
+  filesToReview: FileForReview[],
+): Promise<ReviewResult[]> {
+  const batches = splitFilesIntoBatches(filesToReview);
+  if (batches.length === 1) {
+    return reviewSkillGroup(apiKey, skills, filesToReview);
+  }
+
+  const reviewsBySkill = new Map<string, ReviewResult[]>();
+  for (const skill of skills) {
+    reviewsBySkill.set(skill, []);
+  }
+
+  for (let index = 0; index < batches.length; index++) {
+    const batch = batches[index];
+    const batchTokens = batch.reduce((sum, file) => sum + estimateTokens(file.content), 0);
+    console.log(`    Batch ${index + 1}/${batches.length}: ${batch.length} files, ~${Math.round(batchTokens / 1000)}K tokens`);
+    const batchReviews = await reviewSkillGroup(apiKey, skills, batch);
+    for (const review of batchReviews) {
+      reviewsBySkill.get(review.skill)?.push(review);
+    }
+  }
+
+  return skills.map((skill) => mergeReviewResults(skill, reviewsBySkill.get(skill) ?? []));
 }
 
 export function collectFilesForReview(
@@ -138,7 +216,7 @@ async function processGroupPlans(
       : groupSkillNames[0];
 
     // Budget check — only for non-cached groups that will call the LLM
-    if (cumulativeTokens + tokenCount > maxTokens && cumulativeTokens > 0) {
+    if (cumulativeTokens + tokenCount > maxTokens) {
       if (!options?.yes) {
         console.log(`\n  Budget alert: ${Math.round(cumulativeTokens / 1000)}K / ${Math.round(maxTokens / 1000)}K tokens used.`);
         console.log(`  ${skillLabel} would add ~${Math.round(tokenCount / 1000)}K tokens.`);
@@ -175,7 +253,7 @@ async function processGroupPlans(
     console.log(`  Reviewing ${skillLabel}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
 
     try {
-      const reviews = await reviewSkillGroup(apiKey, groupSkillNames, filesToReview);
+      const reviews = await reviewGroupWithBatches(apiKey, groupSkillNames, filesToReview);
 
       if (reviews.length > 0) {
         await saveCachedGroupReview(cwd, cacheKey, reviews);

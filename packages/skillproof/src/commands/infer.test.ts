@@ -93,4 +93,42 @@ describe("infer", () => {
     assert.deepEqual(saved.skills[0].strengths, ["Good type safety"]);
     assert.equal(saved.skills[0].reasoning, "Solid TypeScript usage");
   });
+
+  it("splitFilesIntoBatches limits each batch by input tokens", async () => {
+    const { splitFilesIntoBatches } = await import("./infer.ts");
+
+    const files = [
+      { path: "a.ts", content: "a".repeat(40000), ownership: 1, skill: "TypeScript" },
+      { path: "b.ts", content: "b".repeat(40000), ownership: 1, skill: "TypeScript" },
+      { path: "c.ts", content: "c".repeat(40000), ownership: 1, skill: "TypeScript" },
+    ];
+
+    const batches = splitFilesIntoBatches(files, 25_000);
+    assert.equal(batches.length, 2);
+    assert.deepEqual(batches.map((batch) => batch.map((file) => file.path)), [["a.ts", "b.ts"], ["c.ts"]]);
+  });
+
+  it("mergeReviewResults averages scores and deduplicates strengths", async () => {
+    const { mergeReviewResults } = await import("./infer.ts");
+
+    const merged = mergeReviewResults("Go", [
+      {
+        skill: "Go",
+        quality_score: 0.8,
+        reasoning: "Strong API boundaries.",
+        strengths: ["Interfaces", "Testing"],
+      },
+      {
+        skill: "Go",
+        quality_score: 0.6,
+        reasoning: "Good error handling.",
+        strengths: ["Testing", "Error wrapping"],
+      },
+    ]);
+
+    assert.equal(merged.skill, "Go");
+    assert.equal(merged.quality_score, 0.7);
+    assert.equal(merged.reasoning, "Strong API boundaries. Good error handling.");
+    assert.deepEqual(merged.strengths, ["Interfaces", "Testing", "Error wrapping"]);
+  });
 });
