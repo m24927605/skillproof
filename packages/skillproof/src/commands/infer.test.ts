@@ -94,6 +94,52 @@ describe("infer", () => {
     assert.equal(saved.skills[0].reasoning, "Solid TypeScript usage");
   });
 
+  it("Skill type accepts hybrid scoring fields", async () => {
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+    manifest.skills = [
+      {
+        name: "TypeScript",
+        confidence: 0.72,
+        evidence_ids: ["EV-1"],
+        inferred_by: "llm",
+        strengths: ["Type safety"],
+        reasoning: "Strong usage",
+        static_confidence: 0.6,
+        llm_confidence: 0.85,
+        review_priority: 0.9,
+        review_decision: "llm-reviewed",
+        evidence_digest: ["Owned 4 TypeScript files", "Has tests covering API handlers"],
+      },
+      {
+        name: "Docker",
+        confidence: 0.45,
+        evidence_ids: ["EV-2"],
+        inferred_by: "static",
+        static_confidence: 0.45,
+        review_decision: "static-only",
+      },
+    ];
+    await writeManifest(manifestPath, manifest);
+    const saved = await readManifest(manifestPath);
+
+    const ts = saved.skills[0];
+    assert.equal(ts.static_confidence, 0.6);
+    assert.equal(ts.llm_confidence, 0.85);
+    assert.equal(ts.review_priority, 0.9);
+    assert.equal(ts.review_decision, "llm-reviewed");
+    assert.deepEqual(ts.evidence_digest, ["Owned 4 TypeScript files", "Has tests covering API handlers"]);
+
+    const docker = saved.skills[1];
+    assert.equal(docker.static_confidence, 0.45);
+    assert.equal(docker.llm_confidence, undefined);
+    assert.equal(docker.review_decision, "static-only");
+  });
+
   it("splitFilesIntoBatches limits each batch by input tokens", async () => {
     const { splitFilesIntoBatches } = await import("./infer.ts");
 
