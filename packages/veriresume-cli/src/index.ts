@@ -31,8 +31,15 @@ program
 program
   .command("infer-skills")
   .description("Infer skills from evidence using static signals")
-  .action(async () => {
-    await runInfer(process.cwd());
+  .option("--max-review-tokens <tokens>", "Maximum total input tokens for code review (default: 200000)")
+  .option("--yes", "Skip all confirmation prompts")
+  .option("--dry-run", "Show cost estimate without executing review")
+  .action(async (options: { maxReviewTokens?: string; yes?: boolean; dryRun?: boolean }) => {
+    await runInfer(process.cwd(), {
+      maxReviewTokens: options.maxReviewTokens ? Number(options.maxReviewTokens) : undefined,
+      yes: options.yes,
+      dryRun: options.dryRun,
+    });
   });
 
 program
@@ -132,11 +139,15 @@ program
   .option("-o, --output <path>", "Output file path")
   .option("--display-name <name>", "Display name for the resume")
   .option("--contact-email <email>", "Contact email for the resume")
+  .option("--max-review-tokens <tokens>", "Maximum total input tokens for code review (default: 200000)")
+  .option("--yes", "Skip all confirmation prompts")
+  .option("--dry-run", "Show cost estimate without executing review")
   .action(async (options: {
     scanMode?: string; parentDir?: string;
     repos?: string; emails?: string;
     locale?: string; format?: string; output?: string;
     displayName?: string; contactEmail?: string;
+    maxReviewTokens?: string; yes?: boolean; dryRun?: boolean;
   }) => {
     await runAll(process.cwd(), {
       scanMode: options.scanMode as "current" | "local-multi" | "github" | undefined,
@@ -148,6 +159,9 @@ program
       output: options.output,
       displayName: options.displayName,
       contactEmail: options.contactEmail,
+      maxReviewTokens: options.maxReviewTokens ? Number(options.maxReviewTokens) : undefined,
+      yes: options.yes,
+      dryRun: options.dryRun,
     });
   });
 

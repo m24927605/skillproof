@@ -24,6 +24,7 @@ export async function runAll(
     repos?: string[]; emails?: string[];
     displayName?: string; contactEmail?: string;
     skipLlm?: boolean;
+    maxReviewTokens?: number; yes?: boolean; dryRun?: boolean;
   },
 ): Promise<void> {
   const steps = [
@@ -97,7 +98,12 @@ export async function runAll(
 
     // Step 2: Infer
     step("Inferring skills");
-    await runInfer(cwd, { skipLlm: options?.skipLlm });
+    await runInfer(cwd, {
+      skipLlm: options?.skipLlm,
+      maxReviewTokens: options?.maxReviewTokens,
+      yes: options?.yes,
+      dryRun: options?.dryRun,
+    });
 
     // Step 3: Render — interactive prompts
     let locale = options?.locale;

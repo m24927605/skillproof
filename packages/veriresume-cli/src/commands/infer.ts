@@ -7,12 +7,23 @@ import { ask, askYesNo } from "../core/prompt.ts";
 import { readConfig, writeConfig } from "../core/config.ts";
 import { reviewSkillGroup } from "../core/code-review.ts";
 import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, PROMPT_VERSION } from "../core/review-cache.ts";
-import { truncateFileContent, estimateTokens } from "../core/token-estimate.ts";
+import { truncateFileContent, estimateTokens, estimateCost, buildCostPreviewDisplay } from "../core/token-estimate.ts";
+import type { CostPreview } from "../core/token-estimate.ts";
 import { groupSkillsByFileOverlap } from "../core/skill-grouping.ts";
+import type { SkillGroup } from "../core/skill-grouping.ts";
 import type { FileForReview } from "../core/token-estimate.ts";
 import type { Claim, Evidence, Skill } from "../types/manifest.ts";
 
 const TOKEN_BUDGET_PER_SKILL = 50_000;
+
+interface GroupPlan {
+  group: SkillGroup;
+  filesToReview: FileForReview[];
+  tokenCount: number;
+  fileHashes: string[];
+  cacheKey: string;
+  cached: boolean;
+}
 
 export function collectFilesForReview(
   allEvidence: Evidence[],
@@ -51,7 +62,170 @@ function heuristicConfidence(evidenceItems: Evidence[]): number {
   return Math.round(score * 100) / 100;
 }
 
-export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Promise<void> {
+async function processGroupPlans(
+  cwd: string,
+  apiKey: string,
+  groupPlans: GroupPlan[],
+  skillEvidence: Map<string, Evidence[]>,
+  skills: Skill[],
+  options?: { maxReviewTokens?: number; yes?: boolean },
+): Promise<void> {
+  const maxTokens = options?.maxReviewTokens ?? 200_000;
+  let cumulativeTokens = 0;
+
+  for (const plan of groupPlans) {
+    const { group, filesToReview, tokenCount, fileHashes, cacheKey } = plan;
+    const groupSkillNames = group.skills;
+
+    if (filesToReview.length === 0) {
+      for (const skillName of groupSkillNames) {
+        const evs = skillEvidence.get(skillName)!;
+        skills.push({
+          name: skillName,
+          confidence: heuristicConfidence(evs),
+          evidence_ids: evs.map((e) => e.id),
+          inferred_by: "static" as const,
+        });
+      }
+      continue;
+    }
+
+    // Check cache (already computed during pre-compute)
+    if (plan.cached) {
+      const cachedGroup = await getCachedGroupReview(cwd, cacheKey);
+      const cachedMap = new Map(cachedGroup!.map((r) => [r.skill, r]));
+      for (const skillName of groupSkillNames) {
+        const evs = skillEvidence.get(skillName)!;
+        const cached = cachedMap.get(skillName);
+        if (cached) {
+          console.log(`  ${skillName}: cached — ${cached.quality_score} — ${cached.reasoning}`);
+          skills.push({
+            name: skillName,
+            confidence: cached.quality_score,
+            evidence_ids: evs.map((e) => e.id),
+            inferred_by: "llm" as const,
+            strengths: cached.strengths,
+            reasoning: cached.reasoning,
+          });
+        } else {
+          const individualKey = computeCacheKey(skillName, fileHashes, PROMPT_VERSION);
+          const individualCached = await getCachedReview(cwd, individualKey);
+          if (individualCached) {
+            console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
+            skills.push({
+              name: skillName,
+              confidence: individualCached.quality_score,
+              evidence_ids: evs.map((e) => e.id),
+              inferred_by: "llm" as const,
+              strengths: individualCached.strengths,
+              reasoning: individualCached.reasoning,
+            });
+          } else {
+            skills.push({
+              name: skillName,
+              confidence: heuristicConfidence(evs),
+              evidence_ids: evs.map((e) => e.id),
+              inferred_by: "static" as const,
+            });
+          }
+        }
+      }
+      continue;
+    }
+
+    const skillLabel = groupSkillNames.length > 1
+      ? `[${groupSkillNames.join(", ")}]`
+      : groupSkillNames[0];
+
+    // Budget check — only for non-cached groups that will call the LLM
+    if (cumulativeTokens + tokenCount > maxTokens && cumulativeTokens > 0) {
+      if (!options?.yes) {
+        console.log(`\n  Budget alert: ${Math.round(cumulativeTokens / 1000)}K / ${Math.round(maxTokens / 1000)}K tokens used.`);
+        console.log(`  ${skillLabel} would add ~${Math.round(tokenCount / 1000)}K tokens.`);
+        const proceed = await askYesNo("  Continue reviewing?");
+        if (!proceed) {
+          for (const skillName of groupSkillNames) {
+            const evs = skillEvidence.get(skillName)!;
+            skills.push({
+              name: skillName,
+              confidence: heuristicConfidence(evs),
+              evidence_ids: evs.map((e) => e.id),
+              inferred_by: "static" as const,
+            });
+          }
+          continue;
+        }
+      } else if (cumulativeTokens + tokenCount > maxTokens) {
+        console.log(`  ${skillLabel}: skipped (budget exceeded)`);
+        for (const skillName of groupSkillNames) {
+          const evs = skillEvidence.get(skillName)!;
+          skills.push({
+            name: skillName,
+            confidence: heuristicConfidence(evs),
+            evidence_ids: evs.map((e) => e.id),
+            inferred_by: "static" as const,
+          });
+        }
+        continue;
+      }
+    }
+
+    cumulativeTokens += tokenCount;
+
+    console.log(`  Reviewing ${skillLabel}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
+
+    try {
+      const reviews = await reviewSkillGroup(apiKey, groupSkillNames, filesToReview);
+
+      if (reviews.length > 0) {
+        await saveCachedGroupReview(cwd, cacheKey, reviews);
+      }
+      for (const review of reviews) {
+        const individualKey = computeCacheKey(review.skill, fileHashes, PROMPT_VERSION);
+        await saveCachedReview(cwd, individualKey, review);
+      }
+
+      const reviewMap = new Map(reviews.map((r) => [r.skill, r]));
+      for (const skillName of groupSkillNames) {
+        const evs = skillEvidence.get(skillName)!;
+        const review = reviewMap.get(skillName);
+        if (review) {
+          console.log(`  ${skillName}: ${review.quality_score} — ${review.reasoning}`);
+          skills.push({
+            name: skillName,
+            confidence: review.quality_score,
+            evidence_ids: evs.map((e) => e.id),
+            inferred_by: "llm" as const,
+            strengths: review.strengths,
+            reasoning: review.reasoning,
+          });
+        } else {
+          console.log(`  ${skillName}: no review returned, falling back to heuristic`);
+          skills.push({
+            name: skillName,
+            confidence: heuristicConfidence(evs),
+            evidence_ids: evs.map((e) => e.id),
+            inferred_by: "static" as const,
+          });
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.log(`  ${skillLabel}: code review failed (${message}), falling back to heuristic`);
+      for (const skillName of groupSkillNames) {
+        const evs = skillEvidence.get(skillName)!;
+        skills.push({
+          name: skillName,
+          confidence: heuristicConfidence(evs),
+          evidence_ids: evs.map((e) => e.id),
+          inferred_by: "static" as const,
+        });
+      }
+    }
+  }
+}
+
+export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxReviewTokens?: number; yes?: boolean; dryRun?: boolean }): Promise<void> {
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
 
@@ -122,8 +296,17 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
     // Group skills by file overlap
     const groups = groupSkillsByFileOverlap(skillFilePaths);
 
-    // Process each group
-    for (const group of groups) {
+    // Sort groups by total evidence count (highest priority first)
+    const sortedGroups = [...groups].sort((a, b) => {
+      const countA = a.skills.reduce((sum, s) => sum + (skillEvidence.get(s)?.length || 0), 0);
+      const countB = b.skills.reduce((sum, s) => sum + (skillEvidence.get(s)?.length || 0), 0);
+      return countB - countA;
+    });
+
+    // Pre-compute: collect files and check cache for each group
+    const groupPlans: GroupPlan[] = [];
+
+    for (const group of sortedGroups) {
       const groupSkillNames = group.skills;
       const groupCacheKeyName = [...groupSkillNames].sort().join("+");
 
@@ -162,8 +345,48 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
         tokenCount += tokens;
       }
 
-      if (filesToReview.length === 0) {
-        for (const skillName of groupSkillNames) {
+      // Check cache using combined key
+      const fileHashes = sortedEvidence
+        .filter((ev) => filesToReview.some((f) => f.path === ev.source))
+        .map((ev) => ev.hash);
+      const cacheKey = computeCacheKey(groupCacheKeyName, fileHashes, PROMPT_VERSION);
+      const cachedGroup = await getCachedGroupReview(cwd, cacheKey);
+
+      groupPlans.push({
+        group,
+        filesToReview,
+        tokenCount,
+        fileHashes,
+        cacheKey,
+        cached: !!(cachedGroup && cachedGroup.length > 0),
+      });
+    }
+
+    // Build and display cost preview
+    const OUTPUT_TOKENS_PER_SKILL = 200;
+    const totalGroups = groupPlans.filter(p => p.filesToReview.length > 0).length;
+    const cachedGroups = groupPlans.filter(p => p.cached).length;
+    const totalInputTokens = groupPlans.reduce((sum, p) => sum + p.tokenCount, 0);
+    const actualInputTokens = groupPlans.filter(p => !p.cached).reduce((sum, p) => sum + p.tokenCount, 0);
+    const totalOutputTokens = totalGroups * OUTPUT_TOKENS_PER_SKILL;
+    const actualOutputTokens = (totalGroups - cachedGroups) * OUTPUT_TOKENS_PER_SKILL;
+    const totalCost = estimateCost(totalInputTokens, totalOutputTokens);
+    const actualCost = estimateCost(actualInputTokens, actualOutputTokens);
+
+    const preview: CostPreview = {
+      totalGroups, cachedGroups,
+      totalInputTokens, actualInputTokens,
+      totalOutputTokens, actualOutputTokens,
+      totalCost, actualCost,
+    };
+
+    console.log(buildCostPreviewDisplay(preview));
+
+    if (options?.dryRun) {
+      console.log("\n  Dry run — no LLM calls made.");
+      // Still write static-only skills to manifest
+      for (const plan of groupPlans) {
+        for (const skillName of plan.group.skills) {
           const evs = skillEvidence.get(skillName)!;
           skills.push({
             name: skillName,
@@ -172,47 +395,15 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
             inferred_by: "static" as const,
           });
         }
-        continue;
       }
-
-      // Check cache using combined key
-      const fileHashes = sortedEvidence
-        .filter((ev) => filesToReview.some((f) => f.path === ev.source))
-        .map((ev) => ev.hash);
-      const cacheKey = computeCacheKey(groupCacheKeyName, fileHashes, PROMPT_VERSION);
-      const cachedGroup = await getCachedGroupReview(cwd, cacheKey);
-
-      if (cachedGroup && cachedGroup.length > 0) {
-        // Group cache hit — map each cached review to its skill
-        const cachedMap = new Map(cachedGroup.map((r) => [r.skill, r]));
-        for (const skillName of groupSkillNames) {
-          const evs = skillEvidence.get(skillName)!;
-          const cached = cachedMap.get(skillName);
-          if (cached) {
-            console.log(`  ${skillName}: cached — ${cached.quality_score} — ${cached.reasoning}`);
-            skills.push({
-              name: skillName,
-              confidence: cached.quality_score,
-              evidence_ids: evs.map((e) => e.id),
-              inferred_by: "llm" as const,
-              strengths: cached.strengths,
-              reasoning: cached.reasoning,
-            });
-          } else {
-            // Skill not in group cache — try individual cache
-            const individualKey = computeCacheKey(skillName, fileHashes, PROMPT_VERSION);
-            const individualCached = await getCachedReview(cwd, individualKey);
-            if (individualCached) {
-              console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
-              skills.push({
-                name: skillName,
-                confidence: individualCached.quality_score,
-                evidence_ids: evs.map((e) => e.id),
-                inferred_by: "llm" as const,
-                strengths: individualCached.strengths,
-                reasoning: individualCached.reasoning,
-              });
-            } else {
+    } else {
+      if (!options?.yes && actualCost > 0) {
+        const proceed = await askYesNo("Proceed with code review?");
+        if (!proceed) {
+          console.log("Skipping LLM review. Using heuristic scores.");
+          for (const plan of groupPlans) {
+            for (const skillName of plan.group.skills) {
+              const evs = skillEvidence.get(skillName)!;
               skills.push({
                 name: skillName,
                 confidence: heuristicConfidence(evs),
@@ -221,65 +412,11 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
               });
             }
           }
+        } else {
+          await processGroupPlans(cwd, apiKey, groupPlans, skillEvidence, skills, options);
         }
-        continue;
-      }
-
-      const skillLabel = groupSkillNames.length > 1
-        ? `[${groupSkillNames.join(", ")}]`
-        : groupSkillNames[0];
-      console.log(`  Reviewing ${skillLabel}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
-
-      try {
-        const reviews = await reviewSkillGroup(apiKey, groupSkillNames, filesToReview);
-
-        // Save all reviews under group cache key for future lookups
-        if (reviews.length > 0) {
-          await saveCachedGroupReview(cwd, cacheKey, reviews);
-        }
-        // Also cache individual results
-        for (const review of reviews) {
-          const individualKey = computeCacheKey(review.skill, fileHashes, PROMPT_VERSION);
-          await saveCachedReview(cwd, individualKey, review);
-        }
-
-        // Map results back to skills
-        const reviewMap = new Map(reviews.map((r) => [r.skill, r]));
-        for (const skillName of groupSkillNames) {
-          const evs = skillEvidence.get(skillName)!;
-          const review = reviewMap.get(skillName);
-          if (review) {
-            console.log(`  ${skillName}: ${review.quality_score} — ${review.reasoning}`);
-            skills.push({
-              name: skillName,
-              confidence: review.quality_score,
-              evidence_ids: evs.map((e) => e.id),
-              inferred_by: "llm" as const,
-              strengths: review.strengths,
-              reasoning: review.reasoning,
-            });
-          } else {
-            console.log(`  ${skillName}: no review returned, falling back to heuristic`);
-            skills.push({
-              name: skillName,
-              confidence: heuristicConfidence(evs),
-              evidence_ids: evs.map((e) => e.id),
-              inferred_by: "static" as const,
-            });
-          }
-        }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.log(`  ${skillLabel}: code review failed (${message}), falling back to heuristic`);
-        for (const skillName of groupSkillNames) {
-          const evs = skillEvidence.get(skillName)!;
-          skills.push({
-            name: skillName,
-            confidence: heuristicConfidence(evs),
-            evidence_ids: evs.map((e) => e.id),
-            inferred_by: "static" as const,
-          });
-        }
+      } else {
+        await processGroupPlans(cwd, apiKey, groupPlans, skillEvidence, skills, options);
       }
     }
   }

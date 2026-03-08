@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { estimateTokens, estimateCost, buildEstimateDisplay } from "./token-estimate.ts";
+import { estimateTokens, estimateCost, buildEstimateDisplay, buildCostPreviewDisplay } from "./token-estimate.ts";
 
 describe("token-estimate", () => {
   describe("estimateTokens", () => {
@@ -43,6 +43,43 @@ describe("token-estimate", () => {
       assert.ok(display.includes("[B]"));
       assert.ok(display.includes("Full"));
       assert.ok(display.includes("Sampled"));
+    });
+  });
+
+  describe("buildCostPreviewDisplay", () => {
+    it("shows basic cost estimate", () => {
+      const preview = {
+        totalGroups: 3,
+        cachedGroups: 0,
+        totalInputTokens: 100000,
+        actualInputTokens: 100000,
+        totalOutputTokens: 600,
+        actualOutputTokens: 600,
+        totalCost: 0.309,
+        actualCost: 0.309,
+      };
+      const display = buildCostPreviewDisplay(preview);
+      assert.ok(display.includes("Review groups: 3"));
+      assert.ok(display.includes("~100K"));
+      assert.ok(display.includes("$0.31"));
+      assert.ok(!display.includes("Cache hits"));
+    });
+
+    it("shows cache savings when cache hits exist", () => {
+      const preview = {
+        totalGroups: 5,
+        cachedGroups: 3,
+        totalInputTokens: 150000,
+        actualInputTokens: 60000,
+        totalOutputTokens: 1000,
+        actualOutputTokens: 400,
+        totalCost: 0.465,
+        actualCost: 0.186,
+      };
+      const display = buildCostPreviewDisplay(preview);
+      assert.ok(display.includes("Cache hits: 3/5"));
+      assert.ok(display.includes("Actual reviews needed: 2"));
+      assert.ok(display.includes("$0.19"));
     });
   });
 });

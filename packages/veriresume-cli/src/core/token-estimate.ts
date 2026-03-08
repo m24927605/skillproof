@@ -96,3 +96,34 @@ Code Review Token Estimate
       Estimated cost: $${sampledCost.toFixed(2)}
 `;
 }
+
+export interface CostPreview {
+  totalGroups: number;
+  cachedGroups: number;
+  totalInputTokens: number;
+  actualInputTokens: number;
+  totalOutputTokens: number;
+  actualOutputTokens: number;
+  totalCost: number;
+  actualCost: number;
+}
+
+export function buildCostPreviewDisplay(preview: CostPreview): string {
+  const formatTokens = (n: number) => n >= 1000 ? `~${Math.round(n / 1000)}K` : `${n}`;
+
+  let display = `\nCode Review Cost Estimate\n`;
+  display += `${"─".repeat(40)}\n`;
+  display += `  Review groups: ${preview.totalGroups}\n`;
+  display += `  Estimated input tokens: ${formatTokens(preview.totalInputTokens)}\n`;
+  display += `  Estimated output tokens: ${formatTokens(preview.totalOutputTokens)}\n`;
+  display += `  Estimated total cost: $${preview.totalCost.toFixed(2)}\n`;
+
+  if (preview.cachedGroups > 0) {
+    display += `\n  Cache hits: ${preview.cachedGroups}/${preview.totalGroups} groups\n`;
+    display += `  Actual reviews needed: ${preview.totalGroups - preview.cachedGroups}\n`;
+    display += `  Actual estimated cost: $${preview.actualCost.toFixed(2)}\n`;
+  }
+
+  display += `${"─".repeat(40)}`;
+  return display;
+}
