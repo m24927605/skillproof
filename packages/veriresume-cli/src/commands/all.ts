@@ -43,8 +43,8 @@ export async function runAll(
   };
 
   try {
-    // Pre-check: Anthropic API key (skip if skipLlm is set, e.g. in tests)
-    if (!options?.skipLlm) {
+    // Pre-check: Anthropic API key (skip if skipLlm is set, e.g. in tests, or dryRun)
+    if (!options?.skipLlm && !options?.dryRun) {
       let apiKey = await resolveApiKey(cwd);
       if (!apiKey) {
         console.log("Anthropic API key is required for LLM-based skill analysis.");
@@ -104,6 +104,11 @@ export async function runAll(
       yes: options?.yes,
       dryRun: options?.dryRun,
     });
+
+    // Dry run: stop after cost estimate, don't proceed to render/sign/pack
+    if (options?.dryRun) {
+      return;
+    }
 
     // Step 3: Render — interactive prompts
     let locale = options?.locale;

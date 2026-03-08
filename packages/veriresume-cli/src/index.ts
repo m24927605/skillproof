@@ -19,7 +19,7 @@ const program = new Command();
 program
   .name("veriresume")
   .description("Generate verifiable developer resumes from source code")
-  .version("0.1.25");
+  .version("0.1.30");
 
 program
   .command("scan")

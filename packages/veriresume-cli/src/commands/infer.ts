@@ -247,21 +247,25 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
       inferred_by: "static" as const,
     }));
   } else {
-    let apiKey = await resolveApiKey(cwd);
-    if (!apiKey) {
-      console.log("Anthropic API key is required for LLM-based skill analysis.");
-      apiKey = await ask("Enter your Anthropic API key: ");
+    let apiKey = "";
+
+    if (!options?.dryRun) {
+      apiKey = (await resolveApiKey(cwd)) || "";
       if (!apiKey) {
-        console.error("Error: Anthropic API key is required. Cannot infer skills without LLM analysis.");
-        process.exitCode = 1;
-        return;
-      }
-      const save = await askYesNo("Save to .veriresume/config.json for future use?");
-      if (save) {
-        const config = await readConfig(cwd);
-        config.anthropic_api_key = apiKey;
-        await writeConfig(cwd, config);
-        console.log("Key saved.");
+        console.log("Anthropic API key is required for LLM-based skill analysis.");
+        apiKey = await ask("Enter your Anthropic API key: ");
+        if (!apiKey) {
+          console.error("Error: Anthropic API key is required. Cannot infer skills without LLM analysis.");
+          process.exitCode = 1;
+          return;
+        }
+        const save = await askYesNo("Save to .veriresume/config.json for future use?");
+        if (save) {
+          const config = await readConfig(cwd);
+          config.anthropic_api_key = apiKey;
+          await writeConfig(cwd, config);
+          console.log("Key saved.");
+        }
       }
     }
 
@@ -368,8 +372,10 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
     const cachedGroups = groupPlans.filter(p => p.cached).length;
     const totalInputTokens = groupPlans.reduce((sum, p) => sum + p.tokenCount, 0);
     const actualInputTokens = groupPlans.filter(p => !p.cached).reduce((sum, p) => sum + p.tokenCount, 0);
-    const totalOutputTokens = totalGroups * OUTPUT_TOKENS_PER_SKILL;
-    const actualOutputTokens = (totalGroups - cachedGroups) * OUTPUT_TOKENS_PER_SKILL;
+    const totalSkillCount = groupPlans.reduce((sum, p) => sum + p.group.skills.length, 0);
+    const cachedSkillCount = groupPlans.filter(p => p.cached).reduce((sum, p) => sum + p.group.skills.length, 0);
+    const totalOutputTokens = totalSkillCount * OUTPUT_TOKENS_PER_SKILL;
+    const actualOutputTokens = (totalSkillCount - cachedSkillCount) * OUTPUT_TOKENS_PER_SKILL;
     const totalCost = estimateCost(totalInputTokens, totalOutputTokens);
     const actualCost = estimateCost(actualInputTokens, actualOutputTokens);
 
@@ -421,17 +427,19 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
     }
   }
 
-  // 4. Write to manifest
-  manifest.skills = skills;
-  manifest.claims = skills.map((s, i) => ({
-    id: `CLAIM-${i + 1}`,
-    category: inferCategory(s.name),
-    skill: s.name,
-    confidence: s.confidence,
-    evidence_ids: s.evidence_ids,
-  }));
+  if (!options?.dryRun) {
+    // 4. Write to manifest
+    manifest.skills = skills;
+    manifest.claims = skills.map((s, i) => ({
+      id: `CLAIM-${i + 1}`,
+      category: inferCategory(s.name),
+      skill: s.name,
+      confidence: s.confidence,
+      evidence_ids: s.evidence_ids,
+    }));
 
-  await writeManifest(manifestPath, manifest);
+    await writeManifest(manifestPath, manifest);
+  }
 
   // 5. Output summary
   console.log(`\nSkill Assessment Results:`);

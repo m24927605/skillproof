@@ -9,6 +9,35 @@ import { getManifestPath } from "../core/manifest.ts";
 
 const execFileAsync = promisify(execFile);
 
+describe("runAll --dry-run", () => {
+  let tempDir: string;
+
+  before(async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "veriresume-dryrun-"));
+    await execFileAsync("git", ["init", tempDir]);
+    await execFileAsync("git", ["-C", tempDir, "config", "user.name", "Test Author"]);
+    await execFileAsync("git", ["-C", tempDir, "config", "user.email", "test@example.com"]);
+    await writeFile(path.join(tempDir, "index.ts"), 'const x: number = 1;\n', "utf8");
+    await execFileAsync("git", ["-C", tempDir, "add", "."]);
+    await execFileAsync("git", ["-C", tempDir, "commit", "-m", "init"]);
+  });
+
+  after(async () => {
+    await rm(tempDir, { recursive: true });
+  });
+
+  it("stops after infer without writing resume or bundle", async () => {
+    const { runAll } = await import("./all.ts");
+    // Should not throw even without API key
+    await runAll(tempDir, { scanMode: "current", dryRun: true });
+
+    // No bundle should be created
+    await assert.rejects(access(path.join(tempDir, "bundle.zip")));
+    // No resume should be created
+    await assert.rejects(access(path.join(tempDir, "resume.md")));
+  });
+});
+
 describe("runAll", () => {
   let tempDir: string;
 

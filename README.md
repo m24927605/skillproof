@@ -144,8 +144,8 @@ Five types of evidence, each with a hash, timestamp, and ownership score:
 
 - Sensitive files blocklisted: `.env`, `*.pem`, `*.key`, `id_rsa`, `*credentials*`, `*secret*`
 - Content scanning for AWS keys (`AKIA...`), private key headers, GitHub tokens
-- Minimal LLM exposure: only paths, names, and structure — never full file contents
-- Local-first: no network calls from the CLI
+- LLM code review sends truncated file content (up to 150 lines per file) to the Anthropic API for skill assessment
+- Network calls: Anthropic API for code review (infer) and resume generation (render with locale)
 - Private keys stored with `0o600` permissions
 
 ### Cryptographic Signing

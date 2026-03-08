@@ -9,7 +9,7 @@ description: Generate verifiable developer resumes from source code repositories
 - `node` >= 22 installed (for Ed25519 crypto)
 - `gh` installed and authenticated (optional, for GitHub PR evidence)
 
-No other dependencies required. Claude Code executes all logic directly.
+The `resume-all` procedure calls the local `veriresume-cli` Node.js package for non-interactive pipeline execution. Claude Code handles user interaction and invokes the CLI with appropriate flags.
 
 ## Data Locations
 
@@ -33,7 +33,7 @@ All data is stored under `.veriresume/` in the target project directory:
     { "id": "string", "type": "commit|file|dependency|config|pull_request", "hash": "SHA-256", "timestamp": "ISO-8601", "ownership": 0.0-1.0, "source": "string", "metadata": {} }
   ],
   "skills": [
-    { "name": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"], "inferred_by": "static|llm", "strengths": ["string"], "improvements": ["string"], "reasoning": "string" }
+    { "name": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"], "inferred_by": "static|llm", "strengths": ["string"], "reasoning": "string" }
   ],
   "claims": [
     { "id": "string", "category": "language|framework|infrastructure|tool|practice", "skill": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"] }
@@ -161,7 +161,6 @@ Detect skills from evidence and score them via code review.
    - Set each skill's `confidence` to the assessed score.
    - Set `inferred_by` to `"llm"` after review.
    - Set `strengths` to an array of specific strengths observed (e.g., "Strong type definitions with interfaces and generics", "Comprehensive error handling with custom error types").
-   - Set `improvements` to an array of areas for improvement (e.g., "Some functions lack input validation").
    - Set `reasoning` to a brief explanation of the assessment (1-2 sentences).
 
 4. **Write updated manifest** back to `.veriresume/resume-manifest.json`.
@@ -192,7 +191,6 @@ Generate a professional resume from the manifest.
    - Do NOT fabricate skills or experiences not in the manifest.
    - Do NOT include evidence IDs in the resume body.
    - Use the `strengths` and `reasoning` fields from each skill to describe what the developer actually did with each technology. Be specific and grounded in the code review evidence.
-   - Do NOT include `improvements` in the resume output. These are for the developer's private reference only.
    - Integrate personal info naturally if provided.
    - Output format: Markdown.
 
@@ -447,7 +445,8 @@ For current project:
 ```bash
 node --experimental-strip-types /Users/sin-chengchen/github.com/veriresume/packages/veriresume-cli/src/index.ts all \
   --scan-mode current \
-  --locale "<locale>" --format "<format>" -o "<output>"
+  --locale "<locale>" --format "<format>" -o "<output>" \
+  --max-review-tokens 200000 --yes
 ```
 
 For multiple local projects:
@@ -457,7 +456,8 @@ node --experimental-strip-types /Users/sin-chengchen/github.com/veriresume/packa
   --parent-dir "<parent_dir>" \
   --repos "<repo1>,<repo2>,<repo3>" \
   --emails "<email1>,<email2>" \
-  --locale "<locale>" --format "<format>" -o "<output>"
+  --locale "<locale>" --format "<format>" -o "<output>" \
+  --max-review-tokens 200000 --yes
 ```
 
 **IMPORTANT:**
