@@ -6,6 +6,15 @@ import { ask, askYesNo } from "../core/prompt.ts";
 import { readConfig, writeConfig } from "../core/config.ts";
 import type { Claim, Evidence, Skill } from "../types/manifest.ts";
 
+export function collectFilesForReview(
+  allEvidence: Evidence[],
+  evidenceIds: string[],
+): Evidence[] {
+  return allEvidence
+    .filter((e) => evidenceIds.includes(e.id) && e.type === "file")
+    .sort((a, b) => b.ownership - a.ownership);
+}
+
 function inferCategory(skillName: string): Claim["category"] {
   const languages = ["TypeScript", "JavaScript", "Python", "Go", "Rust", "Java"];
   const frameworks = ["React", "Next.js", "Express", "FastAPI", "Vue", "Angular"];

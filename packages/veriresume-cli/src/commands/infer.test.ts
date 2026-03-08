@@ -53,6 +53,24 @@ describe("infer", () => {
     assert.ok(skillEvidence.has("Redis"));
   });
 
+  it("collectFilesForReview returns files sorted by ownership descending", async () => {
+    const { collectFilesForReview } = await import("./infer.ts");
+
+    const evidence = [
+      { id: "EV-FILE-a", type: "file" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 0.3, source: "low.ts" },
+      { id: "EV-FILE-b", type: "file" as const, hash: "b", timestamp: "2026-01-01T00:00:00Z", ownership: 0.9, source: "high.ts" },
+      { id: "EV-FILE-c", type: "file" as const, hash: "c", timestamp: "2026-01-01T00:00:00Z", ownership: 0.7, source: "mid.ts" },
+      { id: "EV-COMMIT-d", type: "commit" as const, hash: "d", timestamp: "2026-01-01T00:00:00Z", ownership: 1, source: "abc" },
+    ];
+    const evidenceIds = evidence.map((e) => e.id);
+
+    const files = collectFilesForReview(evidence, evidenceIds);
+    assert.equal(files.length, 3); // only file type
+    assert.equal(files[0].source, "high.ts"); // highest ownership first
+    assert.equal(files[1].source, "mid.ts");
+    assert.equal(files[2].source, "low.ts");
+  });
+
   it("Skill type accepts strengths, improvements, reasoning fields", async () => {
     const manifest = createEmptyManifest({
       repoUrl: null,
