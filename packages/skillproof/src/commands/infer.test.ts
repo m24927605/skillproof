@@ -140,20 +140,6 @@ describe("infer", () => {
     assert.equal(docker.review_decision, "static-only");
   });
 
-  it("splitFilesIntoBatches limits each batch by input tokens", async () => {
-    const { splitFilesIntoBatches } = await import("./infer.ts");
-
-    const files = [
-      { path: "a.ts", content: "a".repeat(40000), ownership: 1, skill: "TypeScript" },
-      { path: "b.ts", content: "b".repeat(40000), ownership: 1, skill: "TypeScript" },
-      { path: "c.ts", content: "c".repeat(40000), ownership: 1, skill: "TypeScript" },
-    ];
-
-    const batches = splitFilesIntoBatches(files, 25_000);
-    assert.equal(batches.length, 2);
-    assert.deepEqual(batches.map((batch) => batch.map((file) => file.path)), [["a.ts", "b.ts"], ["c.ts"]]);
-  });
-
   it("skipped skills keep static confidence and review_decision static-only", async () => {
     const { buildHybridSkill } = await import("./infer.ts");
     const skill = buildHybridSkill("Redis", [

@@ -5,7 +5,7 @@ import { detectSkillEvidence } from "../core/skills.ts";
 import { resolveApiKey } from "../core/config.ts";
 import { ask, askYesNo } from "../core/prompt.ts";
 import { readConfig, writeConfig } from "../core/config.ts";
-import { reviewSkillGroup, reviewSkillGroupFromDigests } from "../core/code-review.ts";
+import { reviewSkillGroupFromDigests } from "../core/code-review.ts";
 import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, PROMPT_VERSION, LLM_MODEL } from "../core/review-cache.ts";
 import { truncateFileContent, estimateTokens, estimateCost, buildCostPreviewDisplay } from "../core/token-estimate.ts";
 import type { CostPreview } from "../core/token-estimate.ts";
@@ -20,7 +20,6 @@ import { buildEvidenceDigest } from "../core/evidence-digest.ts";
 import type { EvidenceDigest } from "../core/evidence-digest.ts";
 
 const TOKEN_BUDGET_PER_SKILL = 50_000;
-const MAX_INPUT_TOKENS_PER_REQUEST = 25_000;
 
 interface GroupPlan {
   group: SkillGroup;
@@ -31,33 +30,7 @@ interface GroupPlan {
   cached: boolean;
 }
 
-export function splitFilesIntoBatches(
-  files: FileForReview[],
-  maxTokensPerBatch: number = MAX_INPUT_TOKENS_PER_REQUEST,
-): FileForReview[][] {
-  const batches: FileForReview[][] = [];
-  let currentBatch: FileForReview[] = [];
-  let currentTokens = 0;
-
-  for (const file of files) {
-    const fileTokens = estimateTokens(file.content);
-
-    if (currentBatch.length > 0 && currentTokens + fileTokens > maxTokensPerBatch) {
-      batches.push(currentBatch);
-      currentBatch = [];
-      currentTokens = 0;
-    }
-
-    currentBatch.push(file);
-    currentTokens += fileTokens;
-  }
-
-  if (currentBatch.length > 0) {
-    batches.push(currentBatch);
-  }
-
-  return batches;
-}
+// splitFilesIntoBatches removed — no longer used after digest-based review migration
 
 export function mergeReviewResults(skill: string, reviews: ReviewResult[]): ReviewResult {
   if (reviews.length === 0) {
@@ -119,34 +92,6 @@ export function buildHybridSkill(
     llm_confidence: llmConf,
     review_decision: cached ? "cached-llm" : "llm-reviewed",
   };
-}
-
-async function reviewGroupWithBatches(
-  apiKey: string,
-  skills: string[],
-  filesToReview: FileForReview[],
-): Promise<ReviewResult[]> {
-  const batches = splitFilesIntoBatches(filesToReview);
-  if (batches.length === 1) {
-    return reviewSkillGroup(apiKey, skills, filesToReview);
-  }
-
-  const reviewsBySkill = new Map<string, ReviewResult[]>();
-  for (const skill of skills) {
-    reviewsBySkill.set(skill, []);
-  }
-
-  for (let index = 0; index < batches.length; index++) {
-    const batch = batches[index];
-    const batchTokens = batch.reduce((sum, file) => sum + estimateTokens(file.content), 0);
-    console.log(`    Batch ${index + 1}/${batches.length}: ${batch.length} files, ~${Math.round(batchTokens / 1000)}K tokens`);
-    const batchReviews = await reviewSkillGroup(apiKey, skills, batch);
-    for (const review of batchReviews) {
-      reviewsBySkill.get(review.skill)?.push(review);
-    }
-  }
-
-  return skills.map((skill) => mergeReviewResults(skill, reviewsBySkill.get(skill) ?? []));
 }
 
 export function collectFilesForReview(
@@ -461,7 +406,7 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
           if (tokenCount + tokens > budgetPerGroup && filesToReview.length > 0) {
             break;
           }
-          filesToReview.push({ path: ev.source, content: truncated, ownership: ev.ownership, skill: groupSkillNames[0] });
+          filesToReview.push({ path: ev.source, content: truncated, ownership: ev.ownership, skill: groupSkillNames.join("+") });
           fileContentsCache.set(ev.source, truncated);
           tokenCount += tokens;
         }
