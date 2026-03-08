@@ -1,6 +1,6 @@
 {
   "name": "veriresume-cli",
-  "version": "0.1.37",
+  "version": "0.1.38",
   "description": "Generate verifiable developer resumes from source code",
   "type": "module",
   "main": "dist/index.js",

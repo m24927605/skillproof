@@ -41,6 +41,12 @@ describe("review-cache", () => {
       assert.notEqual(key1, key2);
     });
 
+    it("returns different hash for different models", () => {
+      const key1 = computeCacheKey("TypeScript", ["hash1"], "v1", "claude-sonnet-4-6");
+      const key2 = computeCacheKey("TypeScript", ["hash1"], "v1", "claude-haiku-4-5");
+      assert.notEqual(key1, key2);
+    });
+
     it("sorts file hashes for consistent key regardless of order", () => {
       const key1 = computeCacheKey("TypeScript", ["hash2", "hash1"], "v1");
       const key2 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1");

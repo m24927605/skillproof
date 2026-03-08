@@ -107,11 +107,13 @@ bundle.zip
 Containing:
 
 ```
-resume.md
+resume.md (and/or resume.pdf, resume.png, resume.jpg)
 resume-manifest.json
 signatures/
-verification.json
+verification.json (informational only)
 ```
+
+**Security model:** File integrity verification uses `manifest.file_hashes` (covered by Ed25519 signature), not `verification.json`. The sign step computes hashes for all resume files and includes them in the manifest before signing. The verify step checks bundled files against these signed hashes. If `file_hashes` is missing from the manifest but resume files exist, verification fails.
 
 ---
 
@@ -473,11 +475,13 @@ bundle.zip
 Contains:
 
 ```
-resume.md
+resume.md (and/or resume.pdf, resume.png, resume.jpg)
 resume-manifest.json
 signatures/
-verification.json
+verification.json (informational — not used for integrity verification)
 ```
+
+**Integrity model:** The manifest includes a `file_hashes` field containing SHA-256 hashes of all resume files. This field is computed during the sign step and covered by the Ed25519 signature. The verify step validates bundled files against `manifest.file_hashes`, not `verification.json`. This prevents attacks where both resume files and `verification.json` are simultaneously tampered.
 
 ---
 

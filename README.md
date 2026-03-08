@@ -81,7 +81,8 @@ Start a new Claude Code session in a git repository and run `/resume-scan`. You 
 | git user.name | configured | Yes | `git config --global user.name` |
 | git user.email | configured | Yes | `git config --global user.email` |
 | gh CLI | any | Optional | Enables GitHub PR evidence |
-| unzip | any | Optional | Required for `verify` command |
+| unzip | any | Yes | Required for `verify` command |
+| zipinfo | any | Yes | Required for `verify` command (Zip Slip protection) |
 
 Run `veriresume doctor` to check your environment:
 

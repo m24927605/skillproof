@@ -10,9 +10,10 @@ export function computeCacheKey(
   skill: string,
   fileHashes: string[],
   promptVersion: string,
+  model: string = "claude-sonnet-4-6",
 ): string {
   const sorted = [...fileHashes].sort();
-  const input = JSON.stringify({ skill, fileHashes: sorted, promptVersion });
+  const input = JSON.stringify({ skill, fileHashes: sorted, promptVersion, model });
   return createHash("sha256").update(input).digest("hex");
 }
 
