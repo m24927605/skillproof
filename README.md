@@ -209,7 +209,7 @@ cd packages/veriresume-cli
 npm test
 ```
 
-151 tests covering every module plus a full pipeline integration test (scan -> infer -> render -> sign -> pack -> verify).
+153 tests covering every module plus a full pipeline integration test (scan -> infer -> render -> sign -> pack -> verify).
 
 ## Updating
 

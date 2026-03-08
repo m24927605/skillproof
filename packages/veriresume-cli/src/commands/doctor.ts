@@ -155,7 +155,12 @@ export async function runDoctor(): Promise<void> {
     await checkCommand("unzip", ["-v"], "unzip", false, "brew install unzip"),
   );
 
-  // 8. Chrome (optional, for PDF/image export)
+  // 8. zipinfo (optional, used by verify for Zip Slip protection)
+  results.push(
+    await checkCommand("which", ["zipinfo"], "zipinfo", false, "brew install unzip (includes zipinfo)"),
+  );
+
+  // 9. Chrome (optional, for PDF/image export)
   const chromeCandidates = getChromePathCandidates();
   let chromeFound = false;
   for (const c of chromeCandidates) {
