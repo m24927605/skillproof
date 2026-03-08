@@ -80,7 +80,6 @@ describe("token-estimate", () => {
       };
       const display = buildCostPreviewDisplay(preview);
       assert.ok(display.includes("Cache hits: 3/5"));
-      assert.ok(display.includes("Actual reviews needed: 2"));
       assert.ok(display.includes("$0.19"));
     });
   });
@@ -105,6 +104,50 @@ describe("token-estimate", () => {
       assert.ok(display.includes("4"), "should include selected for review");
       assert.ok(display.includes("8"), "should include static-only count");
       assert.ok(display.includes("static-only") || display.includes("Static-only"), "should mention static-only");
+    });
+  });
+
+  describe("buildCostPreviewDisplay with per-skill cache", () => {
+    it("partial-cache group shows lower actual cost than total", () => {
+      const preview = {
+        totalGroups: 2,
+        cachedGroups: 0,
+        totalInputTokens: 100000,
+        actualInputTokens: 30000,
+        totalOutputTokens: 600,
+        actualOutputTokens: 200,
+        totalCost: 0.309,
+        actualCost: 0.093,
+        totalReviewSkills: 3,
+        cachedReviewSkills: 2,
+      };
+      const display = buildCostPreviewDisplay(preview);
+      assert.ok(display.includes("Cached skills: 2/3"));
+      assert.ok(display.includes("Skills needing review: 1"));
+      assert.ok(display.includes("$0.09"));
+    });
+
+    it("full group hits and full misses remain stable", () => {
+      // All cached
+      const allCached = buildCostPreviewDisplay({
+        totalGroups: 2, cachedGroups: 2,
+        totalInputTokens: 50000, actualInputTokens: 0,
+        totalOutputTokens: 400, actualOutputTokens: 0,
+        totalCost: 0.156, actualCost: 0,
+        totalReviewSkills: 2, cachedReviewSkills: 2,
+      });
+      assert.ok(allCached.includes("Cached skills: 2/2"));
+      assert.ok(allCached.includes("$0.00"));
+
+      // No cache
+      const noneDisplay = buildCostPreviewDisplay({
+        totalGroups: 2, cachedGroups: 0,
+        totalInputTokens: 80000, actualInputTokens: 80000,
+        totalOutputTokens: 600, actualOutputTokens: 600,
+        totalCost: 0.249, actualCost: 0.249,
+      });
+      assert.ok(!noneDisplay.includes("Cached skills"));
+      assert.ok(!noneDisplay.includes("Actual estimated cost"));
     });
   });
 

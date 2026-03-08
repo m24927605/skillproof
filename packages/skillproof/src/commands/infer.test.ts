@@ -171,6 +171,43 @@ describe("infer", () => {
     assert.equal(skill.llm_confidence, 0.85);
   });
 
+  it("buildHybridSkill persists evidence_digest for reviewed skills", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const digest = {
+      summaryLines: ["Owned 4 TypeScript files", "Has tests covering API handlers"],
+      snippetBlocks: [{ path: "src/app.ts", note: "ownership: 95%", content: "const x = 1;" }],
+    };
+    const review = { skill: "TypeScript", quality_score: 0.85, reasoning: "Good", strengths: ["types"] };
+    const skill = buildHybridSkill("TypeScript", [
+      { id: "EV-FILE-1", type: "file" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 0.9, source: "src/app.ts" },
+    ], review, false, digest);
+    assert.deepEqual(skill.evidence_digest, ["Owned 4 TypeScript files", "Has tests covering API handlers"]);
+    assert.equal(skill.review_decision, "llm-reviewed");
+  });
+
+  it("buildHybridSkill preserves evidence_digest for cached-llm skills", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const digest = {
+      summaryLines: ["3 React components"],
+      snippetBlocks: [],
+    };
+    const review = { skill: "React", quality_score: 0.75, reasoning: "Nice", strengths: ["hooks"] };
+    const skill = buildHybridSkill("React", [
+      { id: "EV-FILE-1", type: "file" as const, hash: "b", timestamp: "2026-01-01T00:00:00Z", ownership: 0.8, source: "src/App.tsx" },
+    ], review, true, digest);
+    assert.deepEqual(skill.evidence_digest, ["3 React components"]);
+    assert.equal(skill.review_decision, "cached-llm");
+  });
+
+  it("buildHybridSkill omits evidence_digest for static-only skills", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const skill = buildHybridSkill("Redis", [
+      { id: "EV-DEP-redis", type: "dependency" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 1, source: "package.json" },
+    ]);
+    assert.equal(skill.evidence_digest, undefined);
+    assert.equal(skill.review_decision, "static-only");
+  });
+
   it("mergeReviewResults averages scores and deduplicates strengths", async () => {
     const { mergeReviewResults } = await import("./infer.ts");
 

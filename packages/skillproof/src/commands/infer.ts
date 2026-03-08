@@ -28,6 +28,7 @@ interface GroupPlan {
   groupCacheKey: string;
   skillDigests: Map<string, EvidenceDigest>;
   skillDigestHashes: Map<string, string>;
+  skillDigestTokens: Map<string, number>;
   cached: boolean;
 }
 
@@ -64,6 +65,7 @@ export function buildHybridSkill(
   evidence: Evidence[],
   review?: ReviewResult,
   cached?: boolean,
+  digest?: EvidenceDigest,
 ): Skill {
   const staticResult = analyzeStaticQuality(name, evidence);
   const staticConf = staticResult.score;
@@ -82,7 +84,7 @@ export function buildHybridSkill(
   const llmConf = review.quality_score;
   const merged = mergeHybridConfidence(staticConf, llmConf);
 
-  return {
+  const skill: Skill = {
     name,
     confidence: merged,
     evidence_ids: evidence.map((e) => e.id),
@@ -93,6 +95,12 @@ export function buildHybridSkill(
     llm_confidence: llmConf,
     review_decision: cached ? "cached-llm" : "llm-reviewed",
   };
+
+  if (digest) {
+    skill.evidence_digest = digest.summaryLines;
+  }
+
+  return skill;
 }
 
 export function collectFilesForReview(
@@ -145,7 +153,7 @@ async function processGroupPlans(
   let cumulativeTokens = 0;
 
   for (const plan of groupPlans) {
-    const { group, filesToReview, tokenCount, groupCacheKey, skillDigests, skillDigestHashes } = plan;
+    const { group, filesToReview, groupCacheKey, skillDigests, skillDigestHashes, skillDigestTokens } = plan;
     const groupSkillNames = group.skills;
 
     if (filesToReview.length === 0) {
@@ -162,10 +170,11 @@ async function processGroupPlans(
       const cachedMap = new Map(cachedGroup!.map((r) => [r.skill, r]));
       for (const skillName of groupSkillNames) {
         const evs = skillEvidence.get(skillName)!;
+        const digest = skillDigests.get(skillName);
         const cached = cachedMap.get(skillName);
         if (cached) {
           console.log(`  ${skillName}: cached — ${cached.quality_score} — ${cached.reasoning}`);
-          skills.push(buildHybridSkill(skillName, evs, cached, true));
+          skills.push(buildHybridSkill(skillName, evs, cached, true, digest));
         } else {
           // Fallback to per-skill cache (digest-based key)
           const digestHash = skillDigestHashes.get(skillName)!;
@@ -173,7 +182,7 @@ async function processGroupPlans(
           const individualCached = await getCachedReview(cwd, individualKey);
           if (individualCached) {
             console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
-            skills.push(buildHybridSkill(skillName, evs, individualCached, true));
+            skills.push(buildHybridSkill(skillName, evs, individualCached, true, digest));
           } else {
             skills.push(buildHybridSkill(skillName, evs));
           }
@@ -190,8 +199,9 @@ async function processGroupPlans(
       const individualCached = await getCachedReview(cwd, individualKey);
       if (individualCached) {
         const evs = skillEvidence.get(skillName)!;
+        const digest = skillDigests.get(skillName);
         console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
-        skills.push(buildHybridSkill(skillName, evs, individualCached, true));
+        skills.push(buildHybridSkill(skillName, evs, individualCached, true, digest));
       } else {
         uncachedSkills.push(skillName);
       }
@@ -200,15 +210,20 @@ async function processGroupPlans(
     // All skills were individually cached — no LLM call needed
     if (uncachedSkills.length === 0) continue;
 
+    // Compute effective token count for uncached skills only
+    const effectiveTokenCount = uncachedSkills.reduce(
+      (sum, s) => sum + (skillDigestTokens.get(s) ?? 0), 0
+    );
+
     const skillLabel = uncachedSkills.length > 1
       ? `[${uncachedSkills.join(", ")}]`
       : uncachedSkills[0];
 
-    // Budget check — only for skills that will call the LLM
-    if (cumulativeTokens + tokenCount > maxTokens) {
+    // Budget check — only for uncached skills' actual token payload
+    if (cumulativeTokens + effectiveTokenCount > maxTokens) {
       if (!options?.yes) {
         console.log(`\n  Budget alert: ${Math.round(cumulativeTokens / 1000)}K / ${Math.round(maxTokens / 1000)}K tokens used.`);
-        console.log(`  ${skillLabel} would add ~${Math.round(tokenCount / 1000)}K tokens.`);
+        console.log(`  ${skillLabel} would add ~${Math.round(effectiveTokenCount / 1000)}K tokens.`);
         const proceed = await askYesNo("  Continue reviewing?");
         if (!proceed) {
           for (const skillName of uncachedSkills) {
@@ -217,7 +232,7 @@ async function processGroupPlans(
           }
           continue;
         }
-      } else if (cumulativeTokens + tokenCount > maxTokens) {
+      } else if (cumulativeTokens + effectiveTokenCount > maxTokens) {
         console.log(`  ${skillLabel}: skipped (budget exceeded)`);
         for (const skillName of uncachedSkills) {
           const evs = skillEvidence.get(skillName)!;
@@ -227,7 +242,7 @@ async function processGroupPlans(
       }
     }
 
-    cumulativeTokens += tokenCount;
+    cumulativeTokens += effectiveTokenCount;
 
     // Build digest map for uncached skills only
     const uncachedDigests = new Map<string, EvidenceDigest>();
@@ -235,7 +250,7 @@ async function processGroupPlans(
       uncachedDigests.set(skillName, skillDigests.get(skillName)!);
     }
 
-    console.log(`  Reviewing ${skillLabel}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
+    console.log(`  Reviewing ${skillLabel}: ~${Math.round(effectiveTokenCount / 1000)}K tokens`);
 
     try {
       const reviews = await reviewSkillGroupFromDigests(apiKey, uncachedSkills, uncachedDigests);
@@ -256,9 +271,10 @@ async function processGroupPlans(
       const reviewMap = new Map(reviews.map((r) => [r.skill, r]));
       for (const skillName of uncachedSkills) {
         const evs = skillEvidence.get(skillName)!;
+        const digest = skillDigests.get(skillName);
         const review = reviewMap.get(skillName);
         if (review) {
-          const hybrid = buildHybridSkill(skillName, evs, review);
+          const hybrid = buildHybridSkill(skillName, evs, review, false, digest);
           console.log(`  ${skillName}: ${hybrid.confidence} (static: ${hybrid.static_confidence}, llm: ${hybrid.llm_confidence}) — ${review.reasoning}`);
           skills.push(hybrid);
         } else {
@@ -433,15 +449,19 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
           tokenCount += tokens;
         }
 
-        // Build per-skill digests and compute digest hashes
+        // Build per-skill digests, compute digest hashes and per-skill token estimates
         const skillDigests = new Map<string, EvidenceDigest>();
         const skillDigestHashes = new Map<string, string>();
+        const skillDigestTokens = new Map<string, number>();
         for (const skillName of groupSkillNames) {
           const evs = skillEvidence.get(skillName)!;
           const staticResult = analyzeStaticQuality(skillName, evs);
           const digest = buildEvidenceDigest(skillName, evs, staticResult, fileContentsCache);
           skillDigests.set(skillName, digest);
           skillDigestHashes.set(skillName, hashDigest(digest));
+          // Estimate tokens from digest content that will be sent to LLM
+          const digestText = digest.summaryLines.join("\n") + digest.snippetBlocks.map((b) => b.content).join("\n");
+          skillDigestTokens.set(skillName, estimateTokens(digestText));
         }
 
         // Group cache key uses sorted per-skill digest hashes
@@ -459,21 +479,41 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
           groupCacheKey,
           skillDigests,
           skillDigestHashes,
+          skillDigestTokens,
           cached: !!(cachedGroup && cachedGroup.length > 0),
         });
       }
 
-      // Build and display cost preview
+      // Build and display cost preview — check per-skill caches for accurate actual cost
       const OUTPUT_TOKENS_PER_SKILL = 200;
       const totalGroups = groupPlans.filter(p => p.filesToReview.length > 0).length;
       const cachedGroups = groupPlans.filter(p => p.cached).length;
       const totalInputTokens = groupPlans.reduce((sum, p) => sum + p.tokenCount, 0);
-      const actualInputTokens = groupPlans.filter(p => !p.cached).reduce((sum, p) => sum + p.tokenCount, 0);
       const totalSkillCount = groupPlans.reduce((sum, p) => sum + p.group.skills.length, 0);
-      const cachedSkillCount = groupPlans.filter(p => p.cached).reduce((sum, p) => sum + p.group.skills.length, 0);
       const totalOutputTokens = totalSkillCount * OUTPUT_TOKENS_PER_SKILL;
-      const actualOutputTokens = (totalSkillCount - cachedSkillCount) * OUTPUT_TOKENS_PER_SKILL;
       const totalCost = estimateCost(totalInputTokens, totalOutputTokens);
+
+      // For group-cache-miss groups, check per-skill caches to get accurate actual cost
+      let actualInputTokens = 0;
+      let cachedSkillCount = 0;
+      for (const plan of groupPlans) {
+        if (plan.cached) {
+          cachedSkillCount += plan.group.skills.length;
+          continue;
+        }
+        // Group cache miss — check each skill's individual cache
+        for (const skillName of plan.group.skills) {
+          const digestHash = plan.skillDigestHashes.get(skillName)!;
+          const individualKey = computeCacheKey(skillName, [digestHash], PROMPT_VERSION, LLM_MODEL);
+          const individualCached = await getCachedReview(cwd, individualKey);
+          if (individualCached) {
+            cachedSkillCount++;
+          } else {
+            actualInputTokens += plan.skillDigestTokens.get(skillName) ?? 0;
+          }
+        }
+      }
+      const actualOutputTokens = (totalSkillCount - cachedSkillCount) * OUTPUT_TOKENS_PER_SKILL;
       const actualCost = estimateCost(actualInputTokens, actualOutputTokens);
 
       const preview: CostPreview = {
@@ -484,6 +524,8 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
         totalDetectedSkills: skillEvidence.size,
         selectedForReview: skillFilePaths.size,
         staticOnlySkills: staticOnlySkills.length,
+        totalReviewSkills: totalSkillCount,
+        cachedReviewSkills: cachedSkillCount,
       };
 
       console.log(buildCostPreviewDisplay(preview));
