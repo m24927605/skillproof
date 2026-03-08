@@ -32,7 +32,7 @@ describe("runAll", () => {
     await rm(tempDir, { recursive: true });
   });
 
-  it("runs full pipeline scan → infer → render → sign → pack → verify", async () => {
+  it("runs full pipeline scan → infer → sign → render → pack → verify", async () => {
     const { runAll } = await import("./all.ts");
 
     // runAll with current project scan mode, default md format (skip interactive)

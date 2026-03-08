@@ -28,8 +28,8 @@ export async function runAll(
   const steps = [
     "Scanning repository",
     "Inferring skills",
-    "Rendering resume",
     "Signing manifest",
+    "Rendering resume",
     "Packing bundle",
     "Verifying bundle",
   ];
@@ -133,12 +133,13 @@ export async function runAll(
       output = path.join(cwd, `resume.${ext}`);
     }
 
-    step("Rendering resume");
-    await runRender(cwd, locale, format, output, options?.skipLlm ? { yes: true } : undefined);
-
-    // Step 4: Sign
+    // Step 3: Sign (before render so verification block shows signature)
     step("Signing manifest");
     await runSign(cwd);
+
+    // Step 4: Render
+    step("Rendering resume");
+    await runRender(cwd, locale, format, output, options?.skipLlm ? { yes: true } : undefined);
 
     // Step 5: Pack
     step("Packing bundle");
