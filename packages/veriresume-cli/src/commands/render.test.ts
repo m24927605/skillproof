@@ -48,6 +48,56 @@ describe("render", () => {
     assert.ok(!md.includes("git-name"));
   });
 
+  it("displays strengths when available", () => {
+    const manifest: Manifest = {
+      schema_version: "1.0",
+      generated_at: "2025-01-01T00:00:00Z",
+      repo: { url: null, head_commit: "abc" },
+      author: { name: "Jane", email: "jane@ex.com" },
+      evidence: [],
+      skills: [
+        {
+          name: "TypeScript",
+          confidence: 0.85,
+          evidence_ids: [],
+          inferred_by: "llm",
+          strengths: ["Strong type definitions", "Good error handling"],
+          reasoning: "Solid TypeScript usage",
+        },
+      ],
+      claims: [],
+      signatures: [],
+    };
+    const md = renderResume(manifest);
+    assert.ok(md.includes("Strong type definitions"));
+    assert.ok(md.includes("Good error handling"));
+  });
+
+  it("does not display improvements in resume", () => {
+    const manifest: Manifest = {
+      schema_version: "1.0",
+      generated_at: "2025-01-01T00:00:00Z",
+      repo: { url: null, head_commit: "abc" },
+      author: { name: "Jane", email: "jane@ex.com" },
+      evidence: [],
+      skills: [
+        {
+          name: "TypeScript",
+          confidence: 0.85,
+          evidence_ids: [],
+          inferred_by: "llm",
+          strengths: [],
+          improvements: ["Needs more tests"],
+          reasoning: "OK",
+        },
+      ],
+      claims: [],
+      signatures: [],
+    };
+    const md = renderResume(manifest);
+    assert.ok(!md.includes("Needs more tests"));
+  });
+
   it("includes evidence count summary", () => {
     const manifest: Manifest = {
       schema_version: "1.0",

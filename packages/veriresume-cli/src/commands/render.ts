@@ -38,7 +38,14 @@ export function renderResume(manifest: Manifest, display?: ResumeDisplayOptions)
     md += `### ${skill.name}\n`;
     md += `- **Confidence:** ${skill.confidence}\n`;
     md += `- **Evidence:** ${skill.evidence_ids.join(" ")}\n`;
-    md += `- **Inferred by:** ${skill.inferred_by}\n\n`;
+    md += `- **Inferred by:** ${skill.inferred_by}\n`;
+    if (skill.strengths && skill.strengths.length > 0) {
+      md += `- **Strengths:**\n`;
+      for (const s of skill.strengths) {
+        md += `  - ${s}\n`;
+      }
+    }
+    md += `\n`;
   }
 
   md += `## Evidence Summary\n\n`;
