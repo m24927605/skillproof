@@ -6,6 +6,7 @@ resume.md
 .skillproof/
 .claude/
 .DS_Store
+.worktrees/
 
 # Local legacy config (never commit secrets)
 packages/skillproof-cli/.veriresume/
