@@ -1,10 +1,16 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
 import { detectSkillEvidence } from "../core/skills.ts";
 import { resolveApiKey } from "../core/config.ts";
 import { ask, askYesNo } from "../core/prompt.ts";
 import { readConfig, writeConfig } from "../core/config.ts";
+import { reviewSkill } from "../core/code-review.ts";
+import { truncateFileContent, estimateTokens } from "../core/token-estimate.ts";
+import type { FileForReview } from "../core/token-estimate.ts";
 import type { Claim, Evidence, Skill } from "../types/manifest.ts";
+
+const TOKEN_BUDGET_PER_SKILL = 50_000;
 
 export function collectFilesForReview(
   allEvidence: Evidence[],
@@ -26,91 +32,6 @@ function inferCategory(skillName: string): Claim["category"] {
   if (infra.includes(skillName)) return "infrastructure";
   if (tools.includes(skillName)) return "tool";
   return "practice";
-}
-
-function buildSkillSummary(
-  skillName: string,
-  evidenceIds: string[],
-  allEvidence: Evidence[],
-): string {
-  const evidenceItems = allEvidence.filter((e) => evidenceIds.includes(e.id));
-
-  const byType: Record<string, Evidence[]> = {};
-  for (const e of evidenceItems) {
-    byType[e.type] = byType[e.type] || [];
-    byType[e.type].push(e);
-  }
-
-  const lines = [`Skill: ${skillName}`, `Evidence count: ${evidenceItems.length}`];
-
-  if (byType.file) {
-    lines.push(`Files (${byType.file.length}): ${byType.file.map((e) => `${e.source} (ownership: ${e.ownership})`).join(", ")}`);
-  }
-  if (byType.commit) {
-    lines.push(`Commits (${byType.commit.length}): ${byType.commit.slice(0, 5).map((e) => (e.metadata?.message as string) || e.source).join("; ")}`);
-  }
-  if (byType.dependency) {
-    lines.push(`Dependencies (${byType.dependency.length}): ${byType.dependency.map((e) => e.source).join(", ")}`);
-  }
-  if (byType.config) {
-    lines.push(`Config files (${byType.config.length}): ${byType.config.map((e) => e.source).join(", ")}`);
-  }
-  if (byType.pull_request) {
-    lines.push(`Pull Requests (${byType.pull_request.length})`);
-  }
-
-  return lines.join("\n");
-}
-
-async function scoreSkillsWithLLM(
-  apiKey: string,
-  skillEvidence: Map<string, Evidence[]>,
-  allEvidence: Evidence[],
-): Promise<Record<string, number>> {
-  const skillSummaries = [...skillEvidence.entries()]
-    .map(([name, evs]) => buildSkillSummary(name, evs.map((e) => e.id), allEvidence))
-    .join("\n\n---\n\n");
-
-  const prompt = `You are evaluating a software developer's skill proficiency based on code repository evidence.
-
-For each skill below, assess the developer's confidence score from 0.0 to 1.0 based on:
-- Number and quality of evidence items (files, commits, dependencies, configs)
-- File ownership percentage (higher ownership = stronger evidence)
-- Breadth of usage (multiple repos, different contexts)
-- Depth indicators (config files, test files, CI/CD integration suggest deeper knowledge)
-
-Scoring guide:
-- 0.9-1.0: Expert - extensive evidence, high ownership, production-grade usage across repos
-- 0.7-0.89: Proficient - solid evidence, good ownership, meaningful usage
-- 0.5-0.69: Familiar - some evidence, moderate usage
-- 0.3-0.49: Basic - minimal evidence, dependency-only or trivial usage
-- 0.0-0.29: Negligible - near-zero evidence
-
-IMPORTANT: Be critical. Dependency-only evidence (no authored files) should score lower. Config-only evidence without implementation files should also score lower.
-
-Here are the skills and their evidence:
-
-${skillSummaries}
-
-Respond ONLY with a JSON object mapping skill names to confidence scores. Example:
-{"Docker": 0.85, "Python": 0.8}
-
-No explanation, no markdown fences, just the JSON object.`;
-
-  const client = new Anthropic({ apiKey });
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response from Claude API");
-  }
-
-  const cleaned = textBlock.text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned) as Record<string, number>;
 }
 
 function heuristicConfidence(evidenceItems: Evidence[]): number {
@@ -168,17 +89,67 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
       }
     }
 
-    console.log(`\nAnalyzing ${skillEvidence.size} skills with LLM...`);
-    const scores = await scoreSkillsWithLLM(apiKey, skillEvidence, manifest.evidence);
-    console.log("\nLLM Confidence Scores:");
-    console.log(JSON.stringify(scores, null, 2));
+    console.log(`\nAnalyzing ${skillEvidence.size} skills with code review...`);
 
-    skills = [...skillEvidence.entries()].map(([name, evs]) => ({
-      name,
-      confidence: typeof scores[name] === "number" ? scores[name] : 0.5,
-      evidence_ids: evs.map((e) => e.id),
-      inferred_by: "llm" as const,
-    }));
+    skills = [];
+    for (const [name, evs] of skillEvidence) {
+      const fileEvidence = collectFilesForReview(manifest.evidence, evs.map((e) => e.id));
+
+      if (fileEvidence.length === 0) {
+        // No files to review — use heuristic
+        skills.push({
+          name,
+          confidence: heuristicConfidence(evs),
+          evidence_ids: evs.map((e) => e.id),
+          inferred_by: "static" as const,
+        });
+        continue;
+      }
+
+      // Read file contents, sorted by ownership, up to token budget
+      const filesToReview: FileForReview[] = [];
+      let tokenCount = 0;
+      for (const ev of fileEvidence) {
+        const filePath = path.join(cwd, ev.source);
+        let content: string;
+        try {
+          content = await readFile(filePath, "utf-8");
+        } catch {
+          continue; // file may not exist (e.g., deleted)
+        }
+        const truncated = truncateFileContent(content);
+        const tokens = estimateTokens(truncated);
+        if (tokenCount + tokens > TOKEN_BUDGET_PER_SKILL && filesToReview.length > 0) {
+          break;
+        }
+        filesToReview.push({ path: ev.source, content: truncated, ownership: ev.ownership, skill: name });
+        tokenCount += tokens;
+      }
+
+      if (filesToReview.length === 0) {
+        skills.push({
+          name,
+          confidence: heuristicConfidence(evs),
+          evidence_ids: evs.map((e) => e.id),
+          inferred_by: "static" as const,
+        });
+        continue;
+      }
+
+      console.log(`  Reviewing ${name}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
+      const review = await reviewSkill(apiKey, name, filesToReview);
+      console.log(`  ${name}: ${review.quality_score} — ${review.reasoning}`);
+
+      skills.push({
+        name,
+        confidence: review.quality_score,
+        evidence_ids: evs.map((e) => e.id),
+        inferred_by: "llm" as const,
+        strengths: review.strengths,
+        improvements: review.improvements,
+        reasoning: review.reasoning,
+      });
+    }
   }
 
   // 4. Write to manifest
