@@ -45,7 +45,7 @@ Then in Claude Code, add the plugin from the cloned directory:
 ### Standalone CLI (npm)
 
 ```bash
-npm install -g skillproof
+npm install -g @m24927605/skillproof
 
 # Run full pipeline in any git repository
 skillproof all

@@ -5,7 +5,7 @@ Generate **verifiable developer resumes** from source code. Every skill claim is
 ## Install
 
 ```bash
-npm install -g skillproof
+npm install -g @m24927605/skillproof
 ```
 
 ### Prerequisites
