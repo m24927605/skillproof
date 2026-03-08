@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { FileForReview } from "./token-estimate.ts";
+import { LLM_MODEL } from "./review-cache.ts";
 
 export interface ReviewResult {
   skill: string;
@@ -76,7 +77,7 @@ export async function reviewSkill(
   const { systemMessage, userMessage } = buildReviewPrompt(skill, files);
 
   const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: LLM_MODEL,
     max_tokens: 1024,
     system: systemMessage,
     messages: [{ role: "user", content: userMessage }],
@@ -172,7 +173,7 @@ export async function reviewSkillGroup(
   const { systemMessage, userMessage } = buildGroupedReviewPrompt(skills, files);
 
   const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: LLM_MODEL,
     max_tokens: 1024 * skills.length,
     system: systemMessage,
     messages: [{ role: "user", content: userMessage }],

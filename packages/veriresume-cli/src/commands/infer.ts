@@ -6,7 +6,7 @@ import { resolveApiKey } from "../core/config.ts";
 import { ask, askYesNo } from "../core/prompt.ts";
 import { readConfig, writeConfig } from "../core/config.ts";
 import { reviewSkillGroup } from "../core/code-review.ts";
-import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, PROMPT_VERSION } from "../core/review-cache.ts";
+import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, PROMPT_VERSION, LLM_MODEL } from "../core/review-cache.ts";
 import { truncateFileContent, estimateTokens, estimateCost, buildCostPreviewDisplay } from "../core/token-estimate.ts";
 import type { CostPreview } from "../core/token-estimate.ts";
 import { groupSkillsByFileOverlap } from "../core/skill-grouping.ts";
@@ -108,7 +108,7 @@ async function processGroupPlans(
             reasoning: cached.reasoning,
           });
         } else {
-          const individualKey = computeCacheKey(skillName, fileHashes, PROMPT_VERSION);
+          const individualKey = computeCacheKey(skillName, fileHashes, PROMPT_VERSION, LLM_MODEL);
           const individualCached = await getCachedReview(cwd, individualKey);
           if (individualCached) {
             console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
@@ -181,7 +181,7 @@ async function processGroupPlans(
         await saveCachedGroupReview(cwd, cacheKey, reviews);
       }
       for (const review of reviews) {
-        const individualKey = computeCacheKey(review.skill, fileHashes, PROMPT_VERSION);
+        const individualKey = computeCacheKey(review.skill, fileHashes, PROMPT_VERSION, LLM_MODEL);
         await saveCachedReview(cwd, individualKey, review);
       }
 
@@ -353,7 +353,7 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
       const fileHashes = sortedEvidence
         .filter((ev) => filesToReview.some((f) => f.path === ev.source))
         .map((ev) => ev.hash);
-      const cacheKey = computeCacheKey(groupCacheKeyName, fileHashes, PROMPT_VERSION);
+      const cacheKey = computeCacheKey(groupCacheKeyName, fileHashes, PROMPT_VERSION, LLM_MODEL);
       const cachedGroup = await getCachedGroupReview(cwd, cacheKey);
 
       groupPlans.push({

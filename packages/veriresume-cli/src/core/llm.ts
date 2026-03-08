@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Manifest } from "../types/manifest.ts";
+import { LLM_MODEL } from "./review-cache.ts";
 
 export interface PromptMessages {
   systemMessage: string;
@@ -83,7 +84,7 @@ export async function generateResume(
   const { systemMessage, userMessage } = buildPromptMessages(manifest, locale, personalInfo, display);
 
   const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: LLM_MODEL,
     max_tokens: 4096,
     system: systemMessage,
     messages: [{ role: "user", content: userMessage }],

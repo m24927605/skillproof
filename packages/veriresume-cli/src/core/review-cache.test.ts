@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview } from "./review-cache.ts";
+import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, LLM_MODEL } from "./review-cache.ts";
 
 describe("review-cache", () => {
   let tempDir: string;
@@ -18,26 +18,26 @@ describe("review-cache", () => {
 
   describe("computeCacheKey", () => {
     it("returns consistent hash for same inputs", () => {
-      const key1 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1");
-      const key2 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1");
+      const key1 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1", LLM_MODEL);
+      const key2 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1", LLM_MODEL);
       assert.equal(key1, key2);
     });
 
     it("returns different hash for different skills", () => {
-      const key1 = computeCacheKey("TypeScript", ["hash1"], "v1");
-      const key2 = computeCacheKey("React", ["hash1"], "v1");
+      const key1 = computeCacheKey("TypeScript", ["hash1"], "v1", LLM_MODEL);
+      const key2 = computeCacheKey("React", ["hash1"], "v1", LLM_MODEL);
       assert.notEqual(key1, key2);
     });
 
     it("returns different hash for different file hashes", () => {
-      const key1 = computeCacheKey("TypeScript", ["hash1"], "v1");
-      const key2 = computeCacheKey("TypeScript", ["hash2"], "v1");
+      const key1 = computeCacheKey("TypeScript", ["hash1"], "v1", LLM_MODEL);
+      const key2 = computeCacheKey("TypeScript", ["hash2"], "v1", LLM_MODEL);
       assert.notEqual(key1, key2);
     });
 
     it("returns different hash for different prompt versions", () => {
-      const key1 = computeCacheKey("TypeScript", ["hash1"], "v1");
-      const key2 = computeCacheKey("TypeScript", ["hash1"], "v2");
+      const key1 = computeCacheKey("TypeScript", ["hash1"], "v1", LLM_MODEL);
+      const key2 = computeCacheKey("TypeScript", ["hash1"], "v2", LLM_MODEL);
       assert.notEqual(key1, key2);
     });
 
@@ -48,8 +48,8 @@ describe("review-cache", () => {
     });
 
     it("sorts file hashes for consistent key regardless of order", () => {
-      const key1 = computeCacheKey("TypeScript", ["hash2", "hash1"], "v1");
-      const key2 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1");
+      const key1 = computeCacheKey("TypeScript", ["hash2", "hash1"], "v1", LLM_MODEL);
+      const key2 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1", LLM_MODEL);
       assert.equal(key1, key2);
     });
   });

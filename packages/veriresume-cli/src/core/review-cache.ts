@@ -5,12 +5,13 @@ import type { ReviewResult } from "./code-review.ts";
 
 const CACHE_DIR = ".veriresume/cache/reviews";
 export const PROMPT_VERSION = "v1";
+export const LLM_MODEL = "claude-sonnet-4-6";
 
 export function computeCacheKey(
   skill: string,
   fileHashes: string[],
   promptVersion: string,
-  model: string = "claude-sonnet-4-6",
+  model: string,
 ): string {
   const sorted = [...fileHashes].sort();
   const input = JSON.stringify({ skill, fileHashes: sorted, promptVersion, model });
