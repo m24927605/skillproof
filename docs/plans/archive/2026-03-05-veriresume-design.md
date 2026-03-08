@@ -1,4 +1,4 @@
-# VeriResume Design Document
+# SkillProof Design Document
 
 ## Overview
 
@@ -20,17 +20,17 @@ Claude Code Plugin (slash commands + SKILL.md)
         |
         | invokes via bash
         v
-TypeScript CLI (veriresume-cli)
+TypeScript CLI (skillproof-cli)
         |
         | reads/writes
         v
-.veriresume/resume-manifest.json
+.skillproof/skillproof-manifest.json
 ```
 
 ## Project Structure
 
 ```
-veriresume/
+skillproof/
 ├── .claude-plugin/plugin.json
 ├── commands/
 │   ├── resume-scan.md
@@ -43,7 +43,7 @@ veriresume/
 ├── skills/resume/
 │   ├── SKILL.md
 │   └── templates/resume.modern.md
-├── packages/veriresume-cli/
+├── packages/skillproof-cli/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
@@ -130,6 +130,6 @@ scan -> infer -> render -> sign -> pack -> verify
 
 ## Signing
 
-- Keys: `.veriresume/keys/candidate.key` + `.veriresume/keys/candidate.pub`
+- Keys: `.skillproof/keys/candidate.key` + `.skillproof/keys/candidate.pub`
 - Algorithm: Ed25519 via Node.js crypto
 - Signed payload: SHA-256 of canonical JSON manifest (sorted keys, no whitespace)

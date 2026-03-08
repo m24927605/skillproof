@@ -12,10 +12,10 @@ Add a `scan-multi` command that supports scanning multiple local sub-projects or
 
 ```bash
 # Local mode: scan sub-projects under current directory
-veriresume scan-multi
+skillproof scan-multi
 
 # GitHub mode: scan remote repos
-veriresume scan-multi --github
+skillproof scan-multi --github
 ```
 
 ## Local Mode Flow
@@ -25,7 +25,7 @@ veriresume scan-multi --github
 3. Collect and confirm developer emails (identity resolution)
 4. Sequentially scan each selected repo (reuse existing scan logic)
 5. Merge all evidence into one manifest
-6. Write to `.veriresume/resume-manifest.json`
+6. Write to `.skillproof/skillproof-manifest.json`
 
 ## GitHub Mode Flow
 
@@ -40,7 +40,7 @@ veriresume scan-multi --github
 6. Sequentially scan each clone
 7. Merge all evidence into one manifest
 8. Clean up temp clones (including on Ctrl+C)
-9. Write to `.veriresume/resume-manifest.json`
+9. Write to `.skillproof/skillproof-manifest.json`
 
 ## Developer Identity (Multi-Email)
 
@@ -58,8 +58,8 @@ author: { name: string, email: string, emails?: string[] }
 
 ## Evidence Merging
 
-- Evidence `id` prefixed with repo name: `veriresume:EV-COMMIT-abc123`
-- Evidence `source` prefixed with repo name: `veriresume/src/index.ts`
+- Evidence `id` prefixed with repo name: `skillproof:EV-COMMIT-abc123`
+- Evidence `source` prefixed with repo name: `skillproof/src/index.ts`
 - Skills merged by name: same skill → highest confidence, evidence_ids union
 - Manifest gains optional `repos` array (backward compatible):
 

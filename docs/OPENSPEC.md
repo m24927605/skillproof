@@ -89,7 +89,7 @@ Each skill must include:
 All data is stored in a **manifest file**:
 
 ```
-.veriresume/resume-manifest.json
+.skillproof/resume-manifest.json
 ```
 
 The manifest acts as the **source of truth**.
@@ -124,7 +124,7 @@ The system has three layers.
 ```
 Claude Code Plugin
         ↓
-Veriresume CLI
+SkillProof CLI
         ↓
 Evidence + Manifest System
 ```
@@ -136,19 +136,19 @@ Evidence + Manifest System
 The project must generate the following structure.
 
 ```
-veriresume-claude-plugin/
+skillproof-claude-plugin/
 
 .claude-plugin/
   plugin.json
 
 commands/
-  resume-scan.md
-  resume-infer.md
-  resume-render.md
-  resume-sign.md
-  resume-pack.md
-  resume-verify.md
-  resume-all.md
+  skillproof-scan.md
+  skillproof-infer.md
+  skillproof-render.md
+  skillproof-sign.md
+  skillproof-pack.md
+  skillproof-verify.md
+  skillproof-all.md
 
 skills/
   resume/
@@ -157,7 +157,7 @@ skills/
       resume.modern.md
 
 packages/
-  veriresume-cli/
+  skillproof-cli/
     package.json
     tsconfig.json
     src/
@@ -197,7 +197,7 @@ Example:
 
 ```json
 {
-  "name": "veriresume",
+  "name": "skillproof",
   "description": "Generate verifiable developer resumes from source code",
   "version": "0.1.0",
   "author": {
@@ -225,7 +225,7 @@ commands/
 
 ---
 
-## /resume-scan
+## /skillproof-scan
 
 Purpose:
 
@@ -234,7 +234,7 @@ Scan the repository and generate evidence.
 Command file:
 
 ```
-commands/resume-scan.md
+commands/skillproof-scan.md
 ```
 
 Content:
@@ -246,67 +246,67 @@ Scan repository and generate evidence graph.
 
 true
 
-Invoke the veriresume:resume skill and follow the "resume-scan" procedure exactly as presented to you
+Invoke the skillproof:resume skill and follow the "skillproof-scan" procedure exactly as presented to you
 ```
 
 ---
 
-## /resume-infer
+## /skillproof-infer
 
 Infer skills from evidence.
 
 ```
-commands/resume-infer.md
+commands/skillproof-infer.md
 ```
 
 ---
 
-## /resume-render
+## /skillproof-render
 
 Generate resume markdown.
 
 ```
-commands/resume-render.md
+commands/skillproof-render.md
 ```
 
 ---
 
-## /resume-sign
+## /skillproof-sign
 
 Sign resume manifest.
 
 ```
-commands/resume-sign.md
+commands/skillproof-sign.md
 ```
 
 ---
 
-## /resume-pack
+## /skillproof-pack
 
 Create distributable resume bundle.
 
 ```
-commands/resume-pack.md
+commands/skillproof-pack.md
 ```
 
 ---
 
-## /resume-verify
+## /skillproof-verify
 
 Verify resume bundle authenticity.
 
 ```
-commands/resume-verify.md
+commands/skillproof-verify.md
 ```
 
 ---
 
-## /resume-all
+## /skillproof-all
 
 Run the entire pipeline.
 
 ```
-commands/resume-all.md
+commands/skillproof-all.md
 ```
 
 ---
@@ -328,7 +328,7 @@ The skill defines procedures used by slash commands.
 A local CLI tool called:
 
 ```
-veriresume
+skillproof
 ```
 
 Must be implemented in TypeScript.
@@ -338,12 +338,12 @@ Must be implemented in TypeScript.
 ## CLI Commands
 
 ```
-veriresume scan
-veriresume infer-skills
-veriresume render
-veriresume sign
-veriresume pack
-veriresume verify
+skillproof scan
+skillproof infer-skills
+skillproof render
+skillproof sign
+skillproof pack
+skillproof verify
 ```
 
 ---
@@ -353,7 +353,7 @@ veriresume verify
 File:
 
 ```
-.veriresume/resume-manifest.json
+.skillproof/resume-manifest.json
 ```
 
 Example:
@@ -550,7 +550,7 @@ Claude Code must implement:
 Running the command:
 
 ```
-/resume-all
+/skillproof-all
 ```
 
 Must produce:

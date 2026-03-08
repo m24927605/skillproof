@@ -13,12 +13,12 @@
 ### Task 1: Add `@anthropic-ai/sdk` dependency
 
 **Files:**
-- Modify: `packages/veriresume-cli/package.json`
+- Modify: `packages/skillproof-cli/package.json`
 
 **Step 1: Install the SDK**
 
 ```bash
-cd packages/veriresume-cli && npm install @anthropic-ai/sdk
+cd packages/skillproof-cli && npm install @anthropic-ai/sdk
 ```
 
 **Step 2: Verify installation**
@@ -32,7 +32,7 @@ Expected: `OK`
 **Step 3: Commit**
 
 ```bash
-git add packages/veriresume-cli/package.json packages/veriresume-cli/package-lock.json
+git add packages/skillproof-cli/package.json packages/skillproof-cli/package-lock.json
 git commit -m "chore: add @anthropic-ai/sdk dependency"
 ```
 
@@ -41,12 +41,12 @@ git commit -m "chore: add @anthropic-ai/sdk dependency"
 ### Task 2: Create `core/config.ts` — API key management
 
 **Files:**
-- Create: `packages/veriresume-cli/src/core/config.ts`
-- Create: `packages/veriresume-cli/src/core/config.test.ts`
+- Create: `packages/skillproof-cli/src/core/config.ts`
+- Create: `packages/skillproof-cli/src/core/config.test.ts`
 
 **Step 1: Write the failing tests**
 
-Create `packages/veriresume-cli/src/core/config.test.ts`:
+Create `packages/skillproof-cli/src/core/config.test.ts`:
 
 ```typescript
 import { describe, it, beforeEach, afterEach } from "node:test";
@@ -60,8 +60,8 @@ describe("config", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = path.join(os.tmpdir(), `veriresume-test-${Date.now()}`);
-    await mkdir(path.join(tmpDir, ".veriresume"), { recursive: true });
+    tmpDir = path.join(os.tmpdir(), `skillproof-test-${Date.now()}`);
+    await mkdir(path.join(tmpDir, ".skillproof"), { recursive: true });
   });
 
   afterEach(async () => {
@@ -75,7 +75,7 @@ describe("config", () => {
     });
 
     it("reads existing config", async () => {
-      const configPath = path.join(tmpDir, ".veriresume", "config.json");
+      const configPath = path.join(tmpDir, ".skillproof", "config.json");
       await writeFile(configPath, JSON.stringify({ anthropic_api_key: "sk-test" }));
       const config = await readConfig(tmpDir);
       assert.equal(config.anthropic_api_key, "sk-test");
@@ -85,7 +85,7 @@ describe("config", () => {
   describe("writeConfig", () => {
     it("writes config to file", async () => {
       await writeConfig(tmpDir, { anthropic_api_key: "sk-new" });
-      const configPath = path.join(tmpDir, ".veriresume", "config.json");
+      const configPath = path.join(tmpDir, ".skillproof", "config.json");
       const content = JSON.parse(await readFile(configPath, "utf8"));
       assert.equal(content.anthropic_api_key, "sk-new");
     });
@@ -133,37 +133,37 @@ describe("config", () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(config|FAIL|PASS|Error)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(config|FAIL|PASS|Error)"
 ```
 
 Expected: FAIL — module not found
 
 **Step 3: Write implementation**
 
-Create `packages/veriresume-cli/src/core/config.ts`:
+Create `packages/skillproof-cli/src/core/config.ts`:
 
 ```typescript
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-export interface VeriResumeConfig {
+export interface SkillProofConfig {
   anthropic_api_key?: string;
 }
 
 function getConfigPath(cwd: string): string {
-  return path.join(cwd, ".veriresume", "config.json");
+  return path.join(cwd, ".skillproof", "config.json");
 }
 
-export async function readConfig(cwd: string): Promise<VeriResumeConfig> {
+export async function readConfig(cwd: string): Promise<SkillProofConfig> {
   try {
     const content = await readFile(getConfigPath(cwd), "utf8");
-    return JSON.parse(content) as VeriResumeConfig;
+    return JSON.parse(content) as SkillProofConfig;
   } catch {
     return {};
   }
 }
 
-export async function writeConfig(cwd: string, config: VeriResumeConfig): Promise<void> {
+export async function writeConfig(cwd: string, config: SkillProofConfig): Promise<void> {
   const configPath = getConfigPath(cwd);
   await mkdir(path.dirname(configPath), { recursive: true });
   await writeFile(configPath, JSON.stringify(config, null, 2) + "\n", { mode: 0o600 });
@@ -183,7 +183,7 @@ export async function resolveApiKey(cwd: string): Promise<string | null> {
 **Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(config|FAIL|PASS)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(config|FAIL|PASS)"
 ```
 
 Expected: All config tests PASS
@@ -191,7 +191,7 @@ Expected: All config tests PASS
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/core/config.ts packages/veriresume-cli/src/core/config.test.ts
+git add packages/skillproof-cli/src/core/config.ts packages/skillproof-cli/src/core/config.test.ts
 git commit -m "feat(config): add API key management with env var and config file support"
 ```
 
@@ -200,11 +200,11 @@ git commit -m "feat(config): add API key management with env var and config file
 ### Task 3: Create `core/prompt.ts` — interactive stdin helper
 
 **Files:**
-- Create: `packages/veriresume-cli/src/core/prompt.ts`
+- Create: `packages/skillproof-cli/src/core/prompt.ts`
 
 **Step 1: Write implementation** (no unit tests — thin readline wrapper)
 
-Create `packages/veriresume-cli/src/core/prompt.ts`:
+Create `packages/skillproof-cli/src/core/prompt.ts`:
 
 ```typescript
 import readline from "node:readline";
@@ -232,7 +232,7 @@ export async function askYesNo(question: string): Promise<boolean> {
 **Step 2: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/core/prompt.ts
+git add packages/skillproof-cli/src/core/prompt.ts
 git commit -m "feat(prompt): add interactive stdin helper for CLI prompts"
 ```
 
@@ -241,12 +241,12 @@ git commit -m "feat(prompt): add interactive stdin helper for CLI prompts"
 ### Task 4: Create `core/verification.ts` — verification block assembly
 
 **Files:**
-- Create: `packages/veriresume-cli/src/core/verification.ts`
-- Create: `packages/veriresume-cli/src/core/verification.test.ts`
+- Create: `packages/skillproof-cli/src/core/verification.ts`
+- Create: `packages/skillproof-cli/src/core/verification.test.ts`
 
 **Step 1: Write the failing tests**
 
-Create `packages/veriresume-cli/src/core/verification.test.ts`:
+Create `packages/skillproof-cli/src/core/verification.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -287,7 +287,7 @@ describe("verification", () => {
 
     const block = buildVerificationBlock(manifest);
 
-    assert.ok(block.includes("## VeriResume Verification"));
+    assert.ok(block.includes("## SkillProof Verification"));
     assert.ok(block.includes("**Evidence items:** 2"));
     assert.ok(block.includes("**Skills verified:** 1"));
     assert.ok(block.includes("**Repository:** https://github.com/test/repo"));
@@ -303,7 +303,7 @@ describe("verification", () => {
     const manifest = makeManifest({ signatures: [] });
     const block = buildVerificationBlock(manifest);
 
-    assert.ok(block.includes("## VeriResume Verification"));
+    assert.ok(block.includes("## SkillProof Verification"));
     assert.ok(block.includes("**Evidence items:** 2"));
     assert.ok(!block.includes("<details>"));
     assert.ok(block.includes("Unsigned"));
@@ -320,14 +320,14 @@ describe("verification", () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(verification|FAIL|PASS|Error)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(verification|FAIL|PASS|Error)"
 ```
 
 Expected: FAIL — module not found
 
 **Step 3: Write implementation**
 
-Create `packages/veriresume-cli/src/core/verification.ts`:
+Create `packages/skillproof-cli/src/core/verification.ts`:
 
 ```typescript
 import type { Manifest } from "../types/manifest.ts";
@@ -337,7 +337,7 @@ export function buildVerificationBlock(manifest: Manifest): string {
   const commitShort = manifest.repo.head_commit.slice(0, 7);
   const repoUrl = manifest.repo.url || "local";
 
-  let block = `\n---\n\n## VeriResume Verification\n\n`;
+  let block = `\n---\n\n## SkillProof Verification\n\n`;
   block += `This resume is backed by cryptographic evidence from source code analysis.\n\n`;
   block += `- **Evidence items:** ${manifest.evidence.length}\n`;
   block += `- **Skills verified:** ${manifest.skills.length}\n`;
@@ -346,7 +346,7 @@ export function buildVerificationBlock(manifest: Manifest): string {
   block += `- **Generated:** ${manifest.generated_at}\n`;
 
   if (manifest.signatures.length === 0) {
-    block += `\n> ⚠️ Unsigned — run \`veriresume sign\` first to add cryptographic proof.\n`;
+    block += `\n> ⚠️ Unsigned — run \`skillproof sign\` first to add cryptographic proof.\n`;
     return block;
   }
 
@@ -362,7 +362,7 @@ export function buildVerificationBlock(manifest: Manifest): string {
   block += `- **Public key fingerprint:** ${fingerprint}\n`;
   block += `- **Signed at:** ${sig.timestamp}\n`;
   block += `- **Verification status:** VALID\n\n`;
-  block += `To verify: \`veriresume verify bundle.zip\`\n\n`;
+  block += `To verify: \`skillproof verify bundle.zip\`\n\n`;
   block += `</details>\n`;
 
   return block;
@@ -372,7 +372,7 @@ export function buildVerificationBlock(manifest: Manifest): string {
 **Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(verification|FAIL|PASS)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(verification|FAIL|PASS)"
 ```
 
 Expected: All verification tests PASS
@@ -380,8 +380,8 @@ Expected: All verification tests PASS
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/core/verification.ts packages/veriresume-cli/src/core/verification.test.ts
-git commit -m "feat(verification): add VeriResume verification block builder"
+git add packages/skillproof-cli/src/core/verification.ts packages/skillproof-cli/src/core/verification.test.ts
+git commit -m "feat(verification): add SkillProof verification block builder"
 ```
 
 ---
@@ -389,12 +389,12 @@ git commit -m "feat(verification): add VeriResume verification block builder"
 ### Task 5: Create `core/llm.ts` — Claude API wrapper
 
 **Files:**
-- Create: `packages/veriresume-cli/src/core/llm.ts`
-- Create: `packages/veriresume-cli/src/core/llm.test.ts`
+- Create: `packages/skillproof-cli/src/core/llm.ts`
+- Create: `packages/skillproof-cli/src/core/llm.test.ts`
 
 **Step 1: Write the failing tests**
 
-Create `packages/veriresume-cli/src/core/llm.test.ts`:
+Create `packages/skillproof-cli/src/core/llm.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -461,14 +461,14 @@ describe("llm", () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(llm|FAIL|PASS|Error)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(llm|FAIL|PASS|Error)"
 ```
 
 Expected: FAIL — module not found
 
 **Step 3: Write implementation**
 
-Create `packages/veriresume-cli/src/core/llm.ts`:
+Create `packages/skillproof-cli/src/core/llm.ts`:
 
 ```typescript
 import Anthropic from "@anthropic-ai/sdk";
@@ -553,7 +553,7 @@ export async function generateResume(
 **Step 4: Run tests to verify they pass**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(llm|FAIL|PASS)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(llm|FAIL|PASS)"
 ```
 
 Expected: All llm tests PASS (only `buildPromptMessages` is tested; `generateResume` hits real API)
@@ -561,7 +561,7 @@ Expected: All llm tests PASS (only `buildPromptMessages` is tested; `generateRes
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/core/llm.ts packages/veriresume-cli/src/core/llm.test.ts
+git add packages/skillproof-cli/src/core/llm.ts packages/skillproof-cli/src/core/llm.test.ts
 git commit -m "feat(llm): add Claude API wrapper with prompt builder for resume generation"
 ```
 
@@ -570,11 +570,11 @@ git commit -m "feat(llm): add Claude API wrapper with prompt builder for resume 
 ### Task 6: Modify `commands/render.ts` — add LLM render path
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/commands/render.ts`
+- Modify: `packages/skillproof-cli/src/commands/render.ts`
 
 **Step 1: Write the new render command**
 
-Replace the entire content of `packages/veriresume-cli/src/commands/render.ts` with:
+Replace the entire content of `packages/skillproof-cli/src/commands/render.ts` with:
 
 ```typescript
 import type { Manifest } from "../types/manifest.ts";
@@ -609,7 +609,7 @@ export function renderResume(manifest: Manifest): string {
   md += `- **Dependencies detected:** ${depCount}\n`;
   md += `- **Config files scanned:** ${configCount}\n\n`;
   md += `---\n\n`;
-  md += `*This resume was generated by VeriResume and can be cryptographically verified.*\n`;
+  md += `*This resume was generated by SkillProof and can be cryptographically verified.*\n`;
   md += `*Repo: ${manifest.repo.url || "local"} @ ${manifest.repo.head_commit}*\n`;
 
   return md;
@@ -624,7 +624,7 @@ async function resolveApiKeyInteractive(cwd: string): Promise<string> {
     if (!apiKey) {
       throw new Error("API key is required for locale-aware rendering.");
     }
-    const save = await askYesNo("Save to .veriresume/config.json for future use?");
+    const save = await askYesNo("Save to .skillproof/config.json for future use?");
     if (save) {
       const config = await readConfig(cwd);
       config.anthropic_api_key = apiKey;
@@ -669,7 +669,7 @@ export async function runRender(cwd: string, locale?: string): Promise<void> {
 **Step 2: Run existing render tests to verify they still pass**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(render|FAIL|PASS)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(render|FAIL|PASS)"
 ```
 
 Expected: Existing `renderResume` tests still PASS (the function signature is unchanged)
@@ -677,7 +677,7 @@ Expected: Existing `renderResume` tests still PASS (the function signature is un
 **Step 3: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/commands/render.ts
+git add packages/skillproof-cli/src/commands/render.ts
 git commit -m "feat(render): add LLM path with locale support to render command"
 ```
 
@@ -686,11 +686,11 @@ git commit -m "feat(render): add LLM path with locale support to render command"
 ### Task 7: Modify `src/index.ts` — wire up locale argument
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/index.ts`
+- Modify: `packages/skillproof-cli/src/index.ts`
 
 **Step 1: Update the render command registration**
 
-In `packages/veriresume-cli/src/index.ts`, replace the render command block (lines 33-38):
+In `packages/skillproof-cli/src/index.ts`, replace the render command block (lines 33-38):
 
 ```typescript
 program
@@ -718,7 +718,7 @@ program
 **Step 2: Build and verify CLI help**
 
 ```bash
-cd packages/veriresume-cli && npm run build && node dist/index.js render --help
+cd packages/skillproof-cli && npm run build && node dist/index.js render --help
 ```
 
 Expected: Should show `[locale]` argument and `--locale` option in help output
@@ -726,7 +726,7 @@ Expected: Should show `[locale]` argument and `--locale` option in help output
 **Step 3: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/index.ts
+git add packages/skillproof-cli/src/index.ts
 git commit -m "feat(cli): add locale argument and --locale option to render command"
 ```
 
@@ -737,7 +737,7 @@ git commit -m "feat(cli): add locale argument and --locale option to render comm
 **Step 1: Build the project**
 
 ```bash
-cd packages/veriresume-cli && npm run build
+cd packages/skillproof-cli && npm run build
 ```
 
 Expected: No compilation errors
@@ -745,7 +745,7 @@ Expected: No compilation errors
 **Step 2: Run all tests**
 
 ```bash
-cd packages/veriresume-cli && npm test
+cd packages/skillproof-cli && npm test
 ```
 
 Expected: All tests pass
@@ -753,7 +753,7 @@ Expected: All tests pass
 **Step 3: Test no-locale path (backward compatibility)**
 
 ```bash
-node packages/veriresume-cli/dist/index.js render
+node packages/skillproof-cli/dist/index.js render
 ```
 
 Expected: English template output to `resume.md` (same as before)
@@ -761,7 +761,7 @@ Expected: English template output to `resume.md` (same as before)
 **Step 4: Test locale path**
 
 ```bash
-ANTHROPIC_API_KEY=your-key node packages/veriresume-cli/dist/index.js render zh-TW
+ANTHROPIC_API_KEY=your-key node packages/skillproof-cli/dist/index.js render zh-TW
 ```
 
 Expected: Interactive prompt for personal info, then Chinese resume generated with verification block
@@ -769,7 +769,7 @@ Expected: Interactive prompt for personal info, then Chinese resume generated wi
 **Step 5: Test --locale flag**
 
 ```bash
-ANTHROPIC_API_KEY=your-key node packages/veriresume-cli/dist/index.js render --locale ja
+ANTHROPIC_API_KEY=your-key node packages/skillproof-cli/dist/index.js render --locale ja
 ```
 
 Expected: Same flow but with Japanese output

@@ -9,15 +9,15 @@ description: Generate verifiable developer resumes from source code repositories
 - `node` >= 22 installed (for Ed25519 crypto)
 - `gh` installed and authenticated (optional, for GitHub PR evidence)
 
-The `resume-all` procedure calls the local `veriresume-cli` Node.js package for non-interactive pipeline execution. Claude Code handles user interaction and invokes the CLI with appropriate flags.
+The `skillproof-all` procedure calls the local `skillproof-cli` Node.js package for non-interactive pipeline execution. Claude Code handles user interaction and invokes the CLI with appropriate flags.
 
 ## Data Locations
 
-All data is stored under `.veriresume/` in the target project directory:
+All data is stored under `.skillproof/` in the target project directory:
 
-- `.veriresume/resume-manifest.json` — the evidence manifest
-- `.veriresume/keys/candidate.pub` — Ed25519 public key (PEM)
-- `.veriresume/keys/candidate.key` — Ed25519 private key (PEM)
+- `.skillproof/resume-manifest.json` — the evidence manifest
+- `.skillproof/keys/candidate.pub` — Ed25519 public key (PEM)
+- `.skillproof/keys/candidate.key` — Ed25519 private key (PEM)
 - `resume.md` — the generated resume
 - `bundle.zip` — the distributable bundle
 
@@ -46,7 +46,7 @@ All data is stored under `.veriresume/` in the target project directory:
 
 ## Procedures
 
-### resume-scan
+### skillproof-scan
 
 Collect evidence from the current git repository and write the manifest.
 
@@ -113,15 +113,15 @@ Collect evidence from the current git repository and write the manifest.
    node -e "const c=require('crypto');process.stdout.write(c.createHash('sha256').update(require('fs').readFileSync(process.argv[1],'utf8')).digest('hex'))" <file>
    ```
 
-8. **Assemble and write the manifest** using the Write tool to `.veriresume/resume-manifest.json`.
+8. **Assemble and write the manifest** using the Write tool to `.skillproof/resume-manifest.json`.
 
 9. **Report** to user: total evidence count, broken down by type.
 
-### resume-infer
+### skillproof-infer
 
 Detect skills from evidence and score them via code review.
 
-1. **Read** `.veriresume/resume-manifest.json`.
+1. **Read** `.skillproof/resume-manifest.json`.
 
 2. **Apply skill detection rules** to each evidence item:
 
@@ -163,11 +163,11 @@ Detect skills from evidence and score them via code review.
    - Set `strengths` to an array of specific strengths observed (e.g., "Strong type definitions with interfaces and generics", "Comprehensive error handling with custom error types").
    - Set `reasoning` to a brief explanation of the assessment (1-2 sentences).
 
-4. **Write updated manifest** back to `.veriresume/resume-manifest.json`.
+4. **Write updated manifest** back to `.skillproof/resume-manifest.json`.
 
 5. **Report** all skills and their quality scores.
 
-### resume-render
+### skillproof-render
 
 Generate a professional resume from the manifest.
 
@@ -178,7 +178,7 @@ Generate a professional resume from the manifest.
 2. **Collect optional personal info:**
    - Ask: "Would you like to include a personal introduction or work experience? (Type your info, or 'skip')"
 
-3. **Read** `.veriresume/resume-manifest.json`.
+3. **Read** `.skillproof/resume-manifest.json`.
 
 4. **Generate resume content** in the target locale:
    - Write in the target language, following that culture's resume conventions.
@@ -197,13 +197,13 @@ Generate a professional resume from the manifest.
 5. **Assemble the verification block:**
    - Compute manifest hash:
      ```bash
-     node -e "const c=require('crypto'),m=JSON.parse(require('fs').readFileSync('.veriresume/resume-manifest.json','utf8'));m.signatures=[];const s=JSON.stringify(function k(o){if(o===null||typeof o!=='object')return o;if(Array.isArray(o))return o.map(k);const r={};for(const key of Object.keys(o).sort())r[key]=k(o[key]);return r}(m));process.stdout.write(c.createHash('sha256').update(s).digest('hex'))"
+     node -e "const c=require('crypto'),m=JSON.parse(require('fs').readFileSync('.skillproof/resume-manifest.json','utf8'));m.signatures=[];const s=JSON.stringify(function k(o){if(o===null||typeof o!=='object')return o;if(Array.isArray(o))return o.map(k);const r={};for(const key of Object.keys(o).sort())r[key]=k(o[key]);return r}(m));process.stdout.write(c.createHash('sha256').update(s).digest('hex'))"
      ```
    - Append to resume:
      ```
      ---
 
-     ## VeriResume Verification
+     ## SkillProof Verification
 
      This resume is backed by cryptographic evidence from source code analysis.
 
@@ -223,11 +223,11 @@ Generate a professional resume from the manifest.
      - **Signed at:** {timestamp}
      - **Verification status:** VALID
 
-     To verify: `veriresume verify bundle.zip`
+     To verify: `skillproof verify bundle.zip`
 
      </details>
      ```
-   - If `signatures` is empty, replace the `<details>` block with: `> ⚠️ Unsigned — run /resume-sign first to add cryptographic proof.`
+   - If `signatures` is empty, replace the `<details>` block with: `> ⚠️ Unsigned — run /skillproof-sign first to add cryptographic proof.`
 
 6. **Ask output format:** Use AskUserQuestion to present a selection list (do NOT ask the user to type):
    - md (default)
@@ -241,17 +241,17 @@ Generate a professional resume from the manifest.
    - For `md`: Write directly and show full preview.
    - For other formats: Requires Chrome. Use puppeteer or a markdown-to-X converter.
 
-### resume-sign
+### skillproof-sign
 
 Sign the manifest with Ed25519.
 
-1. **Check for existing keys** at `.veriresume/keys/candidate.key` and `.veriresume/keys/candidate.pub`.
+1. **Check for existing keys** at `.skillproof/keys/candidate.key` and `.skillproof/keys/candidate.pub`.
 
 2. **Generate keys if missing:**
    ```bash
    node -e "
    const crypto=require('crypto'),fs=require('fs'),path=require('path');
-   const dir='.veriresume/keys';
+   const dir='.skillproof/keys';
    fs.mkdirSync(dir,{recursive:true});
    const{publicKey,privateKey}=crypto.generateKeyPairSync('ed25519',{
      publicKeyEncoding:{type:'spki',format:'pem'},
@@ -265,7 +265,7 @@ Sign the manifest with Ed25519.
 
 3. **Sign the manifest:**
    ```bash
-   npx veriresume sign
+   npx skillproof sign
    ```
    The CLI handles:
    - Computing `file_hashes` for any resume files present (resume.md, .pdf, .png, etc.)
@@ -278,15 +278,15 @@ Sign the manifest with Ed25519.
 
 4. **Confirm** to user that the manifest has been signed.
 
-### resume-pack
+### skillproof-pack
 
 Create a distributable bundle.
 
-> **Important:** Run `veriresume sign` AFTER rendering resume files. The sign step automatically computes `file_hashes` for all resume files and includes them in the signed manifest. This ensures verification covers file integrity.
+> **Important:** Run `skillproof sign` AFTER rendering resume files. The sign step automatically computes `file_hashes` for all resume files and includes them in the signed manifest. This ensures verification covers file integrity.
 
 1. **Create verification.json (informational) and bundle:**
    ```bash
-   npx veriresume pack
+   npx skillproof pack
    ```
    The CLI handles:
    - Reading the signed manifest (which already contains `file_hashes`)
@@ -295,7 +295,7 @@ Create a distributable bundle.
 
 2. **Confirm** the bundle was created and report its size.
 
-### resume-verify
+### skillproof-verify
 
 Verify a bundle's authenticity.
 
@@ -303,7 +303,7 @@ Verify a bundle's authenticity.
 
 1. **Run verification:**
    ```bash
-   npx veriresume verify bundle.zip
+   npx skillproof verify bundle.zip
    ```
    The CLI handles:
    - Zip Slip protection (validates entries before extraction)
@@ -313,7 +313,7 @@ Verify a bundle's authenticity.
 
 2. **Report** verification results to user.
 
-### resume-all
+### skillproof-all
 
 Run the full pipeline using a two-phase approach: Claude Code handles user interaction via AskUserQuestion, then calls the CLI in non-interactive mode with flags.
 
@@ -363,13 +363,13 @@ The user can type:
    a. Ask for the parent directory path (default: current directory).
    b. Discover repos by running:
       ```bash
-      node --experimental-strip-types /Users/sin-chengchen/github.com/veriresume/packages/veriresume-cli/src/index.ts list-repos --path "<parent_dir>"
+      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts list-repos --path "<parent_dir>"
       ```
       This outputs a JSON array of repo names.
    c. Output the COMPLETE numbered list of repos as plain text (sorted alphabetically, one per line). Then use AskUserQuestion to ask which repos to include. The user types numbers, ranges (e.g. `1,3,5-10`), repo names, or `all`.
    d. Collect emails by running the CLI command (do NOT use `git config` — it misses committer emails):
       ```bash
-      node --experimental-strip-types /Users/sin-chengchen/github.com/veriresume/packages/veriresume-cli/src/index.ts list-emails --path "<parent_dir>" --repos "<repo1>,<repo2>,..."
+      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts list-emails --path "<parent_dir>" --repos "<repo1>,<repo2>,..."
       ```
       This outputs a JSON array of all unique emails (author + committer) from git log. Present all emails to the user to confirm which are theirs.
 
@@ -383,7 +383,7 @@ Run the CLI with all flags so it skips all interactive prompts:
 
 For current project:
 ```bash
-node --experimental-strip-types /Users/sin-chengchen/github.com/veriresume/packages/veriresume-cli/src/index.ts all \
+node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts all \
   --scan-mode current \
   --locale "<locale>" --format "<format>" -o "<output>" \
   --max-review-tokens 200000 --yes
@@ -391,7 +391,7 @@ node --experimental-strip-types /Users/sin-chengchen/github.com/veriresume/packa
 
 For multiple local projects:
 ```bash
-node --experimental-strip-types /Users/sin-chengchen/github.com/veriresume/packages/veriresume-cli/src/index.ts all \
+node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof-cli/src/index.ts all \
   --scan-mode local-multi \
   --parent-dir "<parent_dir>" \
   --repos "<repo1>,<repo2>,<repo3>" \

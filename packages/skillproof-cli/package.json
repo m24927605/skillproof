@@ -1,0 +1,32 @@
+{
+  "name": "skillproof-cli",
+  "version": "1.0.0",
+  "description": "Generate verifiable developer resumes from source code",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "skillproof": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test --experimental-strip-types --test-reporter spec 'src/**/*.test.ts'",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@inquirer/prompts": "^8.3.0",
+    "archiver": "^7.0.0",
+    "commander": "^12.0.0",
+    "marked": "^17.0.4",
+    "puppeteer-core": "^24.38.0"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.0",
+    "@types/marked": "^5.0.2",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}

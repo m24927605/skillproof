@@ -2,11 +2,11 @@
 
 ## Goal
 
-Add a `veriresume doctor` command that checks all prerequisites and displays a flutter-doctor-style table. Update README with a Prerequisites section.
+Add a `skillproof doctor` command that checks all prerequisites and displays a flutter-doctor-style table. Update README with a Prerequisites section.
 
 ## Doctor Command
 
-**File:** `packages/veriresume-cli/src/commands/doctor.ts`
+**File:** `packages/skillproof-cli/src/commands/doctor.ts`
 
 7 checks in order:
 
@@ -22,11 +22,11 @@ Add a `veriresume doctor` command that checks all prerequisites and displays a f
 
 - gh CLI (#5, #6) are optional — show warning triangle instead of X on failure
 - Exit code 0 if all required checks pass, 1 if any required check fails
-- Register as `veriresume doctor` in `index.ts`
+- Register as `skillproof doctor` in `index.ts`
 
 Output style (flutter doctor):
 ```
-VeriResume Doctor
+SkillProof Doctor
 =================
 ✓ Node.js          v22.5.0 (>= 22 required)
 ✓ git              v2.43.0
@@ -39,7 +39,7 @@ VeriResume Doctor
 
 ## README Update
 
-Add Prerequisites section with table of 7 items and a note to run `veriresume doctor`.
+Add Prerequisites section with table of 7 items and a note to run `skillproof doctor`.
 
 ## Files Changed
 

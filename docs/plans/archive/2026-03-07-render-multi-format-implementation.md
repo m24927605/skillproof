@@ -13,12 +13,12 @@
 ### Task 1: Install dependencies
 
 **Files:**
-- Modify: `packages/veriresume-cli/package.json`
+- Modify: `packages/skillproof-cli/package.json`
 
 **Step 1: Install**
 
 ```bash
-cd packages/veriresume-cli && npm install puppeteer-core marked && npm install -D @types/marked
+cd packages/skillproof-cli && npm install puppeteer-core marked && npm install -D @types/marked
 ```
 
 **Step 2: Verify**
@@ -30,7 +30,7 @@ node -e "import('puppeteer-core').then(() => console.log('puppeteer OK')); impor
 **Step 3: Commit**
 
 ```bash
-git add packages/veriresume-cli/package.json packages/veriresume-cli/package-lock.json
+git add packages/skillproof-cli/package.json packages/skillproof-cli/package-lock.json
 git commit -m "chore: add puppeteer-core and marked dependencies"
 ```
 
@@ -39,12 +39,12 @@ git commit -m "chore: add puppeteer-core and marked dependencies"
 ### Task 2: Create `core/browser.ts` — Chrome detection
 
 **Files:**
-- Create: `packages/veriresume-cli/src/core/browser.ts`
-- Create: `packages/veriresume-cli/src/core/browser.test.ts`
+- Create: `packages/skillproof-cli/src/core/browser.ts`
+- Create: `packages/skillproof-cli/src/core/browser.test.ts`
 
 **Step 1: Write failing tests**
 
-Create `packages/veriresume-cli/src/core/browser.test.ts`:
+Create `packages/skillproof-cli/src/core/browser.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -83,12 +83,12 @@ describe("browser", () => {
 **Step 2: Run tests to verify they fail**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(browser|FAIL|Error)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(browser|FAIL|Error)"
 ```
 
 **Step 3: Write implementation**
 
-Create `packages/veriresume-cli/src/core/browser.ts`:
+Create `packages/skillproof-cli/src/core/browser.ts`:
 
 ```typescript
 import { access } from "node:fs/promises";
@@ -149,13 +149,13 @@ export async function findChromePath(): Promise<string> {
 **Step 4: Run tests**
 
 ```bash
-cd packages/veriresume-cli && npm test 2>&1 | grep -E "(browser|FAIL|PASS)"
+cd packages/skillproof-cli && npm test 2>&1 | grep -E "(browser|FAIL|PASS)"
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/core/browser.ts packages/veriresume-cli/src/core/browser.test.ts
+git add packages/skillproof-cli/src/core/browser.ts packages/skillproof-cli/src/core/browser.test.ts
 git commit -m "feat(browser): add Chrome path detection for PDF/image export"
 ```
 
@@ -164,12 +164,12 @@ git commit -m "feat(browser): add Chrome path detection for PDF/image export"
 ### Task 3: Create `core/export.ts` — format conversion
 
 **Files:**
-- Create: `packages/veriresume-cli/src/core/export.ts`
-- Create: `packages/veriresume-cli/src/core/export.test.ts`
+- Create: `packages/skillproof-cli/src/core/export.ts`
+- Create: `packages/skillproof-cli/src/core/export.test.ts`
 
 **Step 1: Write failing tests**
 
-Create `packages/veriresume-cli/src/core/export.test.ts`:
+Create `packages/skillproof-cli/src/core/export.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -211,7 +211,7 @@ describe("export", () => {
 
 **Step 3: Write implementation**
 
-Create `packages/veriresume-cli/src/core/export.ts`:
+Create `packages/skillproof-cli/src/core/export.ts`:
 
 ```typescript
 import { marked } from "marked";
@@ -277,7 +277,7 @@ export async function exportToFormat(
   const chromePath = await findChromePath();
 
   // Write HTML to temp file for puppeteer to load
-  const tmpHtml = path.join(os.tmpdir(), `veriresume-${Date.now()}.html`);
+  const tmpHtml = path.join(os.tmpdir(), `skillproof-${Date.now()}.html`);
   await writeFile(tmpHtml, html, "utf8");
 
   const browser = await launch({
@@ -316,13 +316,13 @@ export async function exportToFormat(
 **Step 4: Run tests**
 
 ```bash
-cd packages/veriresume-cli && npm test
+cd packages/skillproof-cli && npm test
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/core/export.ts packages/veriresume-cli/src/core/export.test.ts
+git add packages/skillproof-cli/src/core/export.ts packages/skillproof-cli/src/core/export.test.ts
 git commit -m "feat(export): add MD→HTML→PDF/PNG/JPEG conversion with puppeteer-core"
 ```
 
@@ -331,7 +331,7 @@ git commit -m "feat(export): add MD→HTML→PDF/PNG/JPEG conversion with puppet
 ### Task 4: Update `commands/render.ts` — add format and output options
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/commands/render.ts`
+- Modify: `packages/skillproof-cli/src/commands/render.ts`
 
 **Step 1: Update runRender signature and logic**
 
@@ -366,13 +366,13 @@ Apply this pattern to both the locale and non-locale code paths.
 **Step 2: Run tests**
 
 ```bash
-cd packages/veriresume-cli && npm test
+cd packages/skillproof-cli && npm test
 ```
 
 **Step 3: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/commands/render.ts
+git add packages/skillproof-cli/src/commands/render.ts
 git commit -m "feat(render): add --format and --output options for multi-format export"
 ```
 
@@ -381,7 +381,7 @@ git commit -m "feat(render): add --format and --output options for multi-format 
 ### Task 5: Update `src/index.ts` — register new options
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/index.ts`
+- Modify: `packages/skillproof-cli/src/index.ts`
 
 **Step 1: Add options to render command**
 
@@ -402,13 +402,13 @@ program
 **Step 2: Build and verify**
 
 ```bash
-cd packages/veriresume-cli && npm run build && node dist/index.js render --help
+cd packages/skillproof-cli && npm run build && node dist/index.js render --help
 ```
 
 **Step 3: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/index.ts
+git add packages/skillproof-cli/src/index.ts
 git commit -m "feat(cli): add --format and --output options to render command"
 ```
 
@@ -417,7 +417,7 @@ git commit -m "feat(cli): add --format and --output options to render command"
 ### Task 6: Update `commands/doctor.ts` — add Chrome check
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/commands/doctor.ts`
+- Modify: `packages/skillproof-cli/src/commands/doctor.ts`
 
 **Step 1: Add Chrome check**
 
@@ -455,13 +455,13 @@ import { constants } from "node:fs";
 **Step 2: Run tests**
 
 ```bash
-cd packages/veriresume-cli && npm test
+cd packages/skillproof-cli && npm test
 ```
 
 **Step 3: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/commands/doctor.ts
+git add packages/skillproof-cli/src/commands/doctor.ts
 git commit -m "feat(doctor): add Chrome availability check for export formats"
 ```
 
@@ -472,13 +472,13 @@ git commit -m "feat(doctor): add Chrome availability check for export formats"
 **Step 1: Build**
 
 ```bash
-cd packages/veriresume-cli && npm run build
+cd packages/skillproof-cli && npm run build
 ```
 
 **Step 2: Run all tests**
 
 ```bash
-cd packages/veriresume-cli && npm test
+cd packages/skillproof-cli && npm test
 ```
 
 **Step 3: Verify CLI**

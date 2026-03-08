@@ -7,7 +7,7 @@ Add `--format` and `--output` options to the `render` command to support MD, PDF
 ## Command Interface
 
 ```bash
-veriresume render [locale] --format <md|pdf|png|jpeg|jpg> --output <path>
+skillproof render [locale] --format <md|pdf|png|jpeg|jpg> --output <path>
 ```
 
 - `--format` defaults to `md`

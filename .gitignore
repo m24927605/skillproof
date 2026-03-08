@@ -3,6 +3,9 @@ dist/
 *.js.map
 bundle.zip
 resume.md
-.veriresume/
+.skillproof/
 .claude/
 .DS_Store
+
+# Local legacy config (never commit secrets)
+packages/skillproof-cli/.veriresume/

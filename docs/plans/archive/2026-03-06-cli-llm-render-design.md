@@ -13,7 +13,7 @@ Add `@anthropic-ai/sdk` as a dependency. The `render` command gains an optional 
 ## Flow
 
 ```
-veriresume render [locale] [--locale <locale>]
+skillproof render [locale] [--locale <locale>]
         │
         ▼
   Has locale? ──no──▶ Existing English template (unchanged)
@@ -31,7 +31,7 @@ veriresume render [locale] [--locale <locale>]
   Read manifest, assemble prompt, call Claude API
         │
         ▼
-  Assemble VeriResume verification block (fixed format)
+  Assemble SkillProof verification block (fixed format)
         │
         ▼
   Write resume.md, print preview
@@ -41,7 +41,7 @@ veriresume render [locale] [--locale <locale>]
 
 Resolution order:
 1. `ANTHROPIC_API_KEY` environment variable
-2. `.veriresume/config.json` → `anthropic_api_key` field
+2. `.skillproof/config.json` → `anthropic_api_key` field
 3. Interactive prompt → optionally save to config.json
 
 Config format:
@@ -52,7 +52,7 @@ Config format:
 ```
 
 Security:
-- `.veriresume/` is already in `.gitignore`
+- `.skillproof/` is already in `.gitignore`
 - `config.json` created with file permission `0o600`
 
 ## LLM Generation
@@ -75,9 +75,9 @@ Same fixed format as the skill version. Assembled programmatically by `core/veri
 | File | Responsibility |
 |------|---------------|
 | `core/llm.ts` | Claude API call wrapper: manifest + locale + personal info → resume Markdown |
-| `core/config.ts` | Read/write `.veriresume/config.json` (API key storage) |
+| `core/config.ts` | Read/write `.skillproof/config.json` (API key storage) |
 | `core/prompt.ts` | Interactive stdin prompts (readline wrapper) |
-| `core/verification.ts` | Assemble VeriResume verification block from manifest data |
+| `core/verification.ts` | Assemble SkillProof verification block from manifest data |
 
 ## Modified Files
 

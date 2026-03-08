@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add a `veriresume doctor` command that checks all prerequisites and a README Prerequisites section.
+**Goal:** Add a `skillproof doctor` command that checks all prerequisites and a README Prerequisites section.
 
 **Architecture:** Single `doctor.ts` file with a `runDoctor()` function that runs 7 checks sequentially, printing flutter-doctor-style output. Each check is a plain object with label, check function, required flag, and fix hint. No abstraction layer needed for 7 items.
 
@@ -13,12 +13,12 @@
 ### Task 1: Core check logic and Node.js version check
 
 **Files:**
-- Create: `packages/veriresume-cli/src/commands/doctor.ts`
-- Create: `packages/veriresume-cli/src/commands/doctor.test.ts`
+- Create: `packages/skillproof-cli/src/commands/doctor.ts`
+- Create: `packages/skillproof-cli/src/commands/doctor.test.ts`
 
 **Step 1: Write the failing test**
 
-Create `packages/veriresume-cli/src/commands/doctor.test.ts`:
+Create `packages/skillproof-cli/src/commands/doctor.test.ts`:
 
 ```typescript
 import { describe, it } from "node:test";
@@ -45,12 +45,12 @@ describe("doctor", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -A 2 "checkNodeVersion"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -A 2 "checkNodeVersion"`
 Expected: FAIL — `checkNodeVersion` is not defined
 
 **Step 3: Write minimal implementation**
 
-Create `packages/veriresume-cli/src/commands/doctor.ts`:
+Create `packages/skillproof-cli/src/commands/doctor.ts`:
 
 ```typescript
 import { execFile } from "node:child_process";
@@ -81,13 +81,13 @@ export function checkNodeVersion(version: string): CheckResult {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
 Expected: 2 tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/commands/doctor.ts packages/veriresume-cli/src/commands/doctor.test.ts
+git add packages/skillproof-cli/src/commands/doctor.ts packages/skillproof-cli/src/commands/doctor.test.ts
 git commit -m "feat(doctor): add Node.js version check"
 ```
 
@@ -96,8 +96,8 @@ git commit -m "feat(doctor): add Node.js version check"
 ### Task 2: Git checks (git binary, user.name, user.email)
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/commands/doctor.ts`
-- Modify: `packages/veriresume-cli/src/commands/doctor.test.ts`
+- Modify: `packages/skillproof-cli/src/commands/doctor.ts`
+- Modify: `packages/skillproof-cli/src/commands/doctor.test.ts`
 
 **Step 1: Write the failing tests**
 
@@ -133,7 +133,7 @@ describe("checkGitConfig", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -A 2 "checkGit"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -A 2 "checkGit"`
 Expected: FAIL — `checkGit` and `checkGitConfig` are not defined
 
 **Step 3: Write minimal implementation**
@@ -172,13 +172,13 @@ export function checkGitConfig(key: string, value: string): CheckResult {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
 Expected: All new tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/commands/doctor.ts packages/veriresume-cli/src/commands/doctor.test.ts
+git add packages/skillproof-cli/src/commands/doctor.ts packages/skillproof-cli/src/commands/doctor.test.ts
 git commit -m "feat(doctor): add git and git config checks"
 ```
 
@@ -187,8 +187,8 @@ git commit -m "feat(doctor): add git and git config checks"
 ### Task 3: Optional checks (gh CLI, gh auth, unzip)
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/commands/doctor.ts`
-- Modify: `packages/veriresume-cli/src/commands/doctor.test.ts`
+- Modify: `packages/skillproof-cli/src/commands/doctor.ts`
+- Modify: `packages/skillproof-cli/src/commands/doctor.test.ts`
 
 **Step 1: Write the failing tests**
 
@@ -226,7 +226,7 @@ describe("checkCommand", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -A 2 "checkCommand"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -A 2 "checkCommand"`
 Expected: FAIL — `checkCommand` is not defined
 
 **Step 3: Write minimal implementation**
@@ -258,13 +258,13 @@ export async function checkCommand(
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
 Expected: All new tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/commands/doctor.ts packages/veriresume-cli/src/commands/doctor.test.ts
+git add packages/skillproof-cli/src/commands/doctor.ts packages/skillproof-cli/src/commands/doctor.test.ts
 git commit -m "feat(doctor): add generic command check for gh/unzip"
 ```
 
@@ -273,8 +273,8 @@ git commit -m "feat(doctor): add generic command check for gh/unzip"
 ### Task 4: Output formatter and runDoctor
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/commands/doctor.ts`
-- Modify: `packages/veriresume-cli/src/commands/doctor.test.ts`
+- Modify: `packages/skillproof-cli/src/commands/doctor.ts`
+- Modify: `packages/skillproof-cli/src/commands/doctor.test.ts`
 
 **Step 1: Write the failing tests**
 
@@ -307,7 +307,7 @@ describe("formatResult", () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -A 2 "formatResult"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -A 2 "formatResult"`
 Expected: FAIL — `formatResult` is not defined
 
 **Step 3: Write minimal implementation**
@@ -331,7 +331,7 @@ export function formatResult(result: CheckResult): string {
 }
 
 export async function runDoctor(): Promise<void> {
-  console.log("VeriResume Doctor");
+  console.log("SkillProof Doctor");
   console.log("=================");
 
   const nodeResult = checkNodeVersion(process.version);
@@ -379,20 +379,20 @@ export async function runDoctor(): Promise<void> {
     console.log("Some required checks failed. Fix the issues above and run again.");
     process.exitCode = 1;
   } else {
-    console.log("All checks passed! You're ready to use VeriResume.");
+    console.log("All checks passed! You're ready to use SkillProof.");
   }
 }
 ```
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd packages/veriresume-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
+Run: `cd packages/skillproof-cli && npm test 2>&1 | grep -E "(pass|fail|✓|✗)"`
 Expected: All tests PASS
 
 **Step 5: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/commands/doctor.ts packages/veriresume-cli/src/commands/doctor.test.ts
+git add packages/skillproof-cli/src/commands/doctor.ts packages/skillproof-cli/src/commands/doctor.test.ts
 git commit -m "feat(doctor): add output formatter and runDoctor"
 ```
 
@@ -401,7 +401,7 @@ git commit -m "feat(doctor): add output formatter and runDoctor"
 ### Task 5: Register doctor command in CLI
 
 **Files:**
-- Modify: `packages/veriresume-cli/src/index.ts:1-61`
+- Modify: `packages/skillproof-cli/src/index.ts:1-61`
 
 **Step 1: Add the doctor command registration**
 
@@ -416,7 +416,7 @@ Add command registration before `program.parse()` (before line 61):
 ```typescript
 program
   .command("doctor")
-  .description("Check prerequisites for using VeriResume")
+  .description("Check prerequisites for using SkillProof")
   .action(async () => {
     await runDoctor();
   });
@@ -424,18 +424,18 @@ program
 
 **Step 2: Build and verify**
 
-Run: `cd packages/veriresume-cli && npm run build && node dist/index.js doctor`
-Expected: VeriResume Doctor output with checkmarks/crosses
+Run: `cd packages/skillproof-cli && npm run build && node dist/index.js doctor`
+Expected: SkillProof Doctor output with checkmarks/crosses
 
 **Step 3: Run all tests to verify nothing broke**
 
-Run: `cd packages/veriresume-cli && npm test`
+Run: `cd packages/skillproof-cli && npm test`
 Expected: All tests PASS (existing + new doctor tests)
 
 **Step 4: Commit**
 
 ```bash
-git add packages/veriresume-cli/src/index.ts
+git add packages/skillproof-cli/src/index.ts
 git commit -m "feat(doctor): register doctor command in CLI"
 ```
 
@@ -462,10 +462,10 @@ Insert after the Installation section (after line 63, before "## The Pipeline"):
 | gh CLI | any | Optional | Enables GitHub PR evidence |
 | unzip | any | Optional | Required for `verify` command |
 
-Run `veriresume doctor` to check your environment:
+Run `skillproof doctor` to check your environment:
 
 ```bash
-npx veriresume doctor
+npx skillproof doctor
 ```
 ```
 
@@ -486,17 +486,17 @@ git commit -m "docs: add Prerequisites section to README"
 
 **Step 1: Run all tests**
 
-Run: `cd packages/veriresume-cli && npm test`
+Run: `cd packages/skillproof-cli && npm test`
 Expected: All tests PASS (existing 46 + new doctor tests)
 
 **Step 2: Build and run doctor end-to-end**
 
-Run: `cd packages/veriresume-cli && npm run build && node dist/index.js doctor`
+Run: `cd packages/skillproof-cli && npm run build && node dist/index.js doctor`
 Expected: Full doctor output with your environment's actual results
 
 **Step 3: Verify help shows doctor**
 
-Run: `cd packages/veriresume-cli && node dist/index.js --help`
+Run: `cd packages/skillproof-cli && node dist/index.js --help`
 Expected: `doctor` appears in command list
 
 **Step 4: Final commit (if any remaining changes)**

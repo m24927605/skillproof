@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Modify the `resume-render` skill procedure so Claude generates a full resume in the user's chosen language with a VeriResume verification block.
+**Goal:** Modify the `resume-render` skill procedure so Claude generates a full resume in the user's chosen language with a SkillProof verification block.
 
-**Architecture:** Two files changed — the skill procedure (`SKILL.md`) and the slash command definition (`commands/resume-render.md`). No CLI code changes. The skill reads the manifest, collects user input (locale + optional bio), generates resume content via LLM, assembles a fixed-format verification block, and writes `resume.md`.
+**Architecture:** Two files changed — the skill procedure (`SKILL.md`) and the slash command definition (`commands/skillproof-render.md`). No CLI code changes. The skill reads the manifest, collects user input (locale + optional bio), generates resume content via LLM, assembles a fixed-format verification block, and writes `resume.md`.
 
 **Tech Stack:** Claude Code skills (Markdown procedure files), no additional dependencies.
 
@@ -13,24 +13,24 @@
 ### Task 1: Update the resume-render slash command
 
 **Files:**
-- Modify: `commands/resume-render.md`
+- Modify: `commands/skillproof-render.md`
 
 **Step 1: Edit the command file**
 
-Replace the entire content of `commands/resume-render.md` with:
+Replace the entire content of `commands/skillproof-render.md` with:
 
 ```markdown
 description: Generate a locale-aware resume from verified skills
 disable-model-invocation: false
 
-Invoke the veriresume:resume skill and follow the "resume-render" procedure exactly as presented to you
+Invoke the skillproof:resume skill and follow the "resume-render" procedure exactly as presented to you
 
 ARGUMENTS: {{args}}
 ```
 
 Key changes:
 - `disable-model-invocation` changed from `true` to `false` (LLM now drives generation)
-- Added `ARGUMENTS: {{args}}` to pass through the locale parameter (e.g., `/resume-render zh-TW`)
+- Added `ARGUMENTS: {{args}}` to pass through the locale parameter (e.g., `/skillproof-render zh-TW`)
 
 **Step 2: Verify the change**
 
@@ -41,7 +41,7 @@ Read the file and confirm:
 **Step 3: Commit**
 
 ```bash
-git add commands/resume-render.md
+git add commands/skillproof-render.md
 git commit -m "feat(render): enable LLM invocation and pass locale argument"
 ```
 
@@ -73,7 +73,7 @@ Replace the existing `### resume-render` section with the following:
    - If the user says "skip" or equivalent, proceed without it.
 
 3. **Read the manifest:**
-   - Read `.veriresume/resume-manifest.json`.
+   - Read `.skillproof/skillproof-manifest.json`.
    - Extract: `author`, `skills` (sorted by confidence descending), `evidence` summary (total count, commits count, files count), `repo`, `generated_at`, `signatures`.
 
 4. **Generate resume content:**
@@ -91,14 +91,14 @@ Replace the existing `### resume-render` section with the following:
      - If personal info was provided, integrate it naturally.
      - Output format is Markdown. Structure sections as appropriate for the target language's resume culture.
 
-5. **Assemble the VeriResume verification block:**
+5. **Assemble the SkillProof verification block:**
    - Read the signature data from the manifest.
    - Append the following fixed-format block after the resume content (fill in values from manifest):
 
    ```
    ---
 
-   ## VeriResume Verification
+   ## SkillProof Verification
 
    This resume is backed by cryptographic evidence from source code analysis.
 
@@ -118,12 +118,12 @@ Replace the existing `### resume-render` section with the following:
    - **Signed at:** {signatures[0].timestamp}
    - **Verification status:** VALID
 
-   To verify: `veriresume verify bundle.zip`
+   To verify: `skillproof verify bundle.zip`
 
    </details>
    ```
 
-   - If `signatures` is empty, replace the `<details>` block with: `> ⚠️ Unsigned — run /resume-sign first to add cryptographic proof.`
+   - If `signatures` is empty, replace the `<details>` block with: `> ⚠️ Unsigned — run /skillproof-sign first to add cryptographic proof.`
 
 6. **Write and preview:**
    - Combine the generated resume content + verification block.
@@ -153,29 +153,29 @@ git commit -m "feat(render): rewrite resume-render procedure for locale-aware LL
 Simulate what the skill does by reading the manifest and verifying the data is accessible:
 
 ```bash
-cat .veriresume/resume-manifest.json | head -20
+cat .skillproof/skillproof-manifest.json | head -20
 ```
 
 Confirm the manifest exists and has `author`, `skills`, `evidence`, `signatures` fields.
 
 **Step 2: Test the slash command**
 
-Run `/resume-render zh-TW` in Claude Code. Verify:
+Run `/skillproof-render zh-TW` in Claude Code. Verify:
 - Claude does NOT ask for locale (it was provided as argument)
 - Claude asks about personal info
 - Claude generates a Chinese resume with English skill names
-- VeriResume verification block appears at the bottom with correct data
+- SkillProof verification block appears at the bottom with correct data
 - `resume.md` is written
 
 **Step 3: Test without locale argument**
 
-Run `/resume-render` in Claude Code. Verify:
+Run `/skillproof-render` in Claude Code. Verify:
 - Claude asks which language to use
 - Flow proceeds as above after answering
 
 **Step 4: Test with unsigned manifest**
 
-Remove signatures from manifest temporarily, run `/resume-render en-US`. Verify:
+Remove signatures from manifest temporarily, run `/skillproof-render en-US`. Verify:
 - Verification block shows the unsigned warning instead of technical details
 
 **Step 5: Commit final state**

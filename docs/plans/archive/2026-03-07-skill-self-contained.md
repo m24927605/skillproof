@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Rewrite SKILL.md so Claude Code executes all logic directly without depending on veriresume CLI.
+**Goal:** Rewrite SKILL.md so Claude Code executes all logic directly without depending on skillproof CLI.
 
 **Architecture:** SKILL.md becomes a pure instruction document. Claude Code uses Bash (git, node -e, zip), Read, and Write tools. No external CLI needed. Only prerequisites: Node.js and git.
 

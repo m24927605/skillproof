@@ -2,7 +2,7 @@
 
 ## Summary
 
-Modify the `resume-render` skill procedure so that Claude reads the VeriResume manifest and generates a full resume in the user's chosen language, with an optional personal bio section and a fixed-format VeriResume verification block at the bottom.
+Modify the `resume-render` skill procedure so that Claude reads the SkillProof manifest and generates a full resume in the user's chosen language, with an optional personal bio section and a fixed-format SkillProof verification block at the bottom.
 
 ## Approach
 
@@ -14,12 +14,12 @@ Modify the `resume-render` skill procedure so that Claude reads the VeriResume m
 
 ## Flow
 
-1. User runs `/resume-render [locale]`
+1. User runs `/skillproof-render [locale]`
 2. If no locale argument, ask the user which language to use
 3. Ask if the user wants to attach personal info (bio, work experience, etc.)
-4. Read `.veriresume/resume-manifest.json`
+4. Read `.skillproof/skillproof-manifest.json`
 5. Claude generates resume content in target language based on manifest + optional personal info
-6. Assemble fixed-format VeriResume verification block from manifest data
+6. Assemble fixed-format SkillProof verification block from manifest data
 7. Combine: resume content + verification block
 8. Write to `resume.md`, show preview
 
@@ -33,14 +33,14 @@ Modify the `resume-render` skill procedure so that Claude reads the VeriResume m
 - Do not include evidence IDs in the resume body
 - Markdown output; structure decided by LLM per language culture conventions, but must include a skills section
 
-## VeriResume Verification Block
+## SkillProof Verification Block
 
 Fixed format, not LLM-generated. Assembled from manifest data:
 
 ```markdown
 ---
 
-## VeriResume Verification
+## SkillProof Verification
 
 This resume is backed by cryptographic evidence from source code analysis.
 
@@ -60,22 +60,22 @@ This resume is backed by cryptographic evidence from source code analysis.
 - **Signed at:** {timestamp}
 - **Verification status:** VALID
 
-To verify: `veriresume verify bundle.zip`
+To verify: `skillproof verify bundle.zip`
 
 </details>
 ```
 
-If manifest is unsigned (empty signatures), omit signature fields and show: "Unsigned — run `/resume-sign` first".
+If manifest is unsigned (empty signatures), omit signature fields and show: "Unsigned — run `/skillproof-sign` first".
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
 | `skills/resume/SKILL.md` | Rewrite `resume-render` procedure with locale handling, personal info collection, LLM generation guidelines, and verification block assembly |
-| `commands/resume-render.md` | Remove `disable-model-invocation: true`, support locale argument |
+| `commands/skillproof-render.md` | Remove `disable-model-invocation: true`, support locale argument |
 
 ## Files NOT Modified
 
-- `packages/veriresume-cli/src/commands/render.ts` — kept as no-LLM English fallback
-- `commands/resume-all.md` / `resume-all` procedure — inherits new behavior automatically
+- `packages/skillproof-cli/src/commands/render.ts` — kept as no-LLM English fallback
+- `commands/skillproof-all.md` / `resume-all` procedure — inherits new behavior automatically
 - `skills/resume/templates/resume.modern.md` — unused but not deleted

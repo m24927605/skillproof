@@ -1,10 +1,10 @@
-# VeriResume
+# SkillProof
 
-VeriResume is a Claude Code plugin that generates **verifiable developer resumes** by scanning your source code repositories. Every skill claim is backed by concrete evidence — commits, dependencies, config files — with confidence scores and cryptographic signatures.
+SkillProof is a Claude Code plugin that generates **verifiable developer resumes** by scanning your source code repositories. Every skill claim is backed by concrete evidence — commits, dependencies, config files — with confidence scores and cryptographic signatures.
 
 ## How it works
 
-Navigate to any git repository and run `/resume-all`. VeriResume scans your commits, dependencies, and config files to build an evidence graph. It then infers your skills using 20+ static signal rules plus Claude's reasoning for deeper analysis (architecture patterns, testing practices, code quality).
+Navigate to any git repository and run `/skillproof-all`. SkillProof scans your commits, dependencies, and config files to build an evidence graph. It then infers your skills using 20+ static signal rules plus Claude's reasoning for deeper analysis (architecture patterns, testing practices, code quality).
 
 The result is a `resume.md` where every skill links back to verifiable evidence, plus a signed `bundle.zip` that anyone can independently verify hasn't been tampered with.
 
@@ -17,13 +17,13 @@ The result is a `resume.md` where every skill links back to verifiable evidence,
 In Claude Code, register the marketplace first:
 
 ```bash
-/plugin marketplace add m24927605/veriresume-marketplace
+/plugin marketplace add m24927605/skillproof-marketplace
 ```
 
 Then install the plugin:
 
 ```bash
-/plugin install veriresume@veriresume-marketplace
+/plugin install skillproof@skillproof-marketplace
 ```
 
 ### Claude Code (manual)
@@ -31,46 +31,46 @@ Then install the plugin:
 Clone the repo and install as a local plugin:
 
 ```bash
-git clone https://github.com/m24927605/veriresume.git
-cd veriresume/packages/veriresume-cli
+git clone https://github.com/m24927605/skillproof.git
+cd skillproof/packages/skillproof-cli
 npm install && npm run build
 ```
 
 Then in Claude Code, add the plugin from the cloned directory:
 
 ```bash
-/plugin add /path/to/veriresume
+/plugin add /path/to/skillproof
 ```
 
 ### Standalone CLI (npm)
 
 ```bash
-npm install -g veriresume-cli
+npm install -g skillproof-cli
 
 # Run full pipeline in any git repository
-veriresume all
+skillproof all
 
 # Or run each step individually
-veriresume scan
-veriresume infer-skills
-veriresume render
-veriresume sign
-veriresume pack
-veriresume verify bundle.zip
+skillproof scan
+skillproof infer-skills
+skillproof render
+skillproof sign
+skillproof pack
+skillproof verify bundle.zip
 ```
 
 ### Standalone CLI (from source)
 
 ```bash
-git clone https://github.com/m24927605/veriresume.git
-cd veriresume/packages/veriresume-cli
+git clone https://github.com/m24927605/skillproof.git
+cd skillproof/packages/skillproof-cli
 npm install && npm run build
-npx veriresume doctor
+npx skillproof doctor
 ```
 
 ### Verify Installation
 
-Start a new Claude Code session in a git repository and run `/resume-scan`. You should see evidence being extracted from your repo.
+Start a new Claude Code session in a git repository and run `/skillproof-scan`. You should see evidence being extracted from your repo.
 
 ## Prerequisites
 
@@ -84,27 +84,27 @@ Start a new Claude Code session in a git repository and run `/resume-scan`. You 
 | unzip | any | Yes | Required for `verify` command |
 | zipinfo | any | Yes | Required for `verify` command (Zip Slip protection) |
 
-Run `veriresume doctor` to check your environment:
+Run `skillproof doctor` to check your environment:
 
 ```bash
-npx veriresume doctor
+npx skillproof doctor
 ```
 
 ## The Pipeline
 
-Run `veriresume all` (CLI) or `/resume-all` (Claude Code plugin) to execute the full pipeline, or run each step individually:
+Run `skillproof all` (CLI) or `/skillproof-all` (Claude Code plugin) to execute the full pipeline, or run each step individually:
 
-1. **`/resume-scan`** — Scans your git history, files, dependencies, and config. Builds an evidence graph and writes the manifest to `.veriresume/resume-manifest.json`.
+1. **`/skillproof-scan`** — Scans your git history, files, dependencies, and config. Builds an evidence graph and writes the manifest to `.skillproof/resume-manifest.json`.
 
-2. **`/resume-infer`** — Infers skills from evidence. First pass uses static signal rules (Dockerfile = Docker, redis dep = Redis, etc.). Second pass uses Claude's reasoning for deeper skills (architecture, testing practices, CI/CD maturity). Supports `--dry-run` for cost estimation without API calls.
+2. **`/skillproof-infer`** — Infers skills from evidence. First pass uses static signal rules (Dockerfile = Docker, redis dep = Redis, etc.). Second pass uses Claude's reasoning for deeper skills (architecture, testing practices, CI/CD maturity). Supports `--dry-run` for cost estimation without API calls.
 
-3. **`/resume-render`** — Generates `resume.md` from the manifest. Skills sorted by confidence, each linked to evidence entries.
+3. **`/skillproof-render`** — Generates `resume.md` from the manifest. Skills sorted by confidence, each linked to evidence entries.
 
-4. **`/resume-sign`** — Signs the manifest with a locally generated Ed25519 key pair. Automatically computes `file_hashes` for all resume files (md, pdf, png, jpg) and includes them in the signed manifest for tamper detection. **Must run after render** so file hashes cover all output formats.
+4. **`/skillproof-sign`** — Signs the manifest with a locally generated Ed25519 key pair. Automatically computes `file_hashes` for all resume files (md, pdf, png, jpg) and includes them in the signed manifest for tamper detection. **Must run after render** so file hashes cover all output formats.
 
-5. **`/resume-pack`** — Creates `bundle.zip` containing resume, manifest, signatures, and verification metadata.
+5. **`/skillproof-pack`** — Creates `bundle.zip` containing resume, manifest, signatures, and verification metadata.
 
-6. **`/resume-verify`** — Verifies a bundle's cryptographic signatures and file integrity. Uses signed `manifest.file_hashes` (not unsigned `verification.json`) for tamper detection. Reports INVALID if `file_hashes` is missing but resume files exist.
+6. **`/skillproof-verify`** — Verifies a bundle's cryptographic signatures and file integrity. Uses signed `manifest.file_hashes` (not unsigned `verification.json`) for tamper detection. Reports INVALID if `file_hashes` is missing but resume files exist.
 
 ## What's Inside
 
@@ -153,7 +153,7 @@ Five types of evidence, each with a hash, timestamp, and ownership score:
 
 - **Algorithm:** Ed25519 via Node.js crypto
 - **Signed payload:** SHA-256 hash of canonical JSON manifest (sorted keys, no whitespace)
-- **Key storage:** `.veriresume/keys/candidate.key` + `.veriresume/keys/candidate.pub`
+- **Key storage:** `.skillproof/keys/candidate.key` + `.skillproof/keys/candidate.pub`
 - **Future:** CI signing (cosign) and third-party policy attestations
 
 ## Architecture
@@ -163,11 +163,11 @@ Claude Code Plugin (slash commands + SKILL.md)
         |
         | orchestrates via bash
         v
-TypeScript CLI (veriresume-cli)
+TypeScript CLI (skillproof-cli)
         |
         | reads/writes
         v
-.veriresume/resume-manifest.json
+.skillproof/resume-manifest.json
 ```
 
 - **Plugin layer** — Slash commands invoke the skill, which orchestrates the CLI and adds LLM reasoning
@@ -177,20 +177,20 @@ TypeScript CLI (veriresume-cli)
 ## Project Structure
 
 ```
-veriresume/
+skillproof/
 ├── .claude-plugin/plugin.json        # Plugin metadata
-├── commands/                          # Slash commands (7 files)
-│   ├── resume-scan.md
-│   ├── resume-infer.md
-│   ├── resume-render.md
-│   ├── resume-sign.md
-│   ├── resume-pack.md
-│   ├── resume-verify.md
-│   └── resume-all.md
+├── commands/                          # Slash commands (skillproof-*)
+│   ├── skillproof-scan.md
+│   ├── skillproof-infer.md
+│   ├── skillproof-render.md
+│   ├── skillproof-sign.md
+│   ├── skillproof-pack.md
+│   ├── skillproof-verify.md
+│   └── skillproof-all.md
 ├── skills/resume/
 │   ├── SKILL.md                      # Skill procedures
 │   └── templates/resume.modern.md    # Resume template
-├── packages/veriresume-cli/
+├── packages/skillproof-cli/
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
@@ -206,16 +206,16 @@ veriresume/
 ## Testing
 
 ```bash
-cd packages/veriresume-cli
+cd packages/skillproof-cli
 npm test
 ```
 
-153 tests covering every module plus a full pipeline integration test (scan -> infer -> render -> sign -> pack -> verify).
+154 tests covering every module plus a full pipeline integration test (scan -> infer -> render -> sign -> pack -> verify).
 
 ## Updating
 
 ```bash
-/plugin update veriresume
+/plugin update skillproof
 ```
 
 ## Contributing
@@ -231,5 +231,5 @@ MIT License — see LICENSE file for details.
 
 ## Support
 
-- **Issues**: https://github.com/m24927605/veriresume/issues
+- **Issues**: https://github.com/m24927605/skillproof/issues
 - **Spec**: [docs/OPENSPEC.md](docs/OPENSPEC.md)

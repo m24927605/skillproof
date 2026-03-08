@@ -2,7 +2,7 @@
 
 ## Problem
 
-The VeriResume CLI's LLM pipeline has several token cost inefficiencies:
+The SkillProof CLI's LLM pipeline has several token cost inefficiencies:
 1. No caching — re-running on unchanged repos pays full cost again
 2. No file deduplication — same file reviewed multiple times across skills
 3. No global budget — skill count explosion = unbounded cost
@@ -13,7 +13,7 @@ The VeriResume CLI's LLM pipeline has several token cost inefficiencies:
 
 ### 1. Review Result Cache
 
-**Location**: `.veriresume/cache/reviews/`
+**Location**: `.skillproof/cache/reviews/`
 **Cache key**: `SHA256(skillName + sortedFileHashes + promptVersion + model)`
 **Format**: JSON file named `{cacheKey}.json` containing the review result
 
@@ -90,11 +90,11 @@ Proceed? [Y/n]
 
 ## Files to Modify
 
-- `packages/veriresume-cli/src/commands/infer.ts` — caching, grouping, budget, cost preview
-- `packages/veriresume-cli/src/commands/all.ts` — pass new flags, integrate cost preview
-- `packages/veriresume-cli/src/core/code-review.ts` — remove improvements, support grouped review
-- `packages/veriresume-cli/src/core/token-estimate.ts` — cost preview calculation
-- `packages/veriresume-cli/src/core/skills.ts` — skill grouping logic
-- `packages/veriresume-cli/src/index.ts` — new CLI flags
+- `packages/skillproof-cli/src/commands/infer.ts` — caching, grouping, budget, cost preview
+- `packages/skillproof-cli/src/commands/all.ts` — pass new flags, integrate cost preview
+- `packages/skillproof-cli/src/core/code-review.ts` — remove improvements, support grouped review
+- `packages/skillproof-cli/src/core/token-estimate.ts` — cost preview calculation
+- `packages/skillproof-cli/src/core/skills.ts` — skill grouping logic
+- `packages/skillproof-cli/src/index.ts` — new CLI flags
 - `skills/resume/SKILL.md` — update documentation
-- `.gitignore` — add `.veriresume/cache/`
+- `.gitignore` — add `.skillproof/cache/`
