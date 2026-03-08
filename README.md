@@ -95,15 +95,15 @@ Run `veriresume all` (CLI) or `/resume-all` (Claude Code plugin) to execute the 
 
 1. **`/resume-scan`** — Scans your git history, files, dependencies, and config. Builds an evidence graph and writes the manifest to `.veriresume/resume-manifest.json`.
 
-2. **`/resume-infer`** — Infers skills from evidence. First pass uses static signal rules (Dockerfile = Docker, redis dep = Redis, etc.). Second pass uses Claude's reasoning for deeper skills (architecture, testing practices, CI/CD maturity).
+2. **`/resume-infer`** — Infers skills from evidence. First pass uses static signal rules (Dockerfile = Docker, redis dep = Redis, etc.). Second pass uses Claude's reasoning for deeper skills (architecture, testing practices, CI/CD maturity). Supports `--dry-run` for cost estimation without API calls.
 
 3. **`/resume-render`** — Generates `resume.md` from the manifest. Skills sorted by confidence, each linked to evidence entries.
 
-4. **`/resume-sign`** — Signs the manifest with a locally generated Ed25519 key pair. Keys stored in `.veriresume/keys/`.
+4. **`/resume-sign`** — Signs the manifest with a locally generated Ed25519 key pair. Automatically computes `file_hashes` for all resume files (md, pdf, png, jpg) and includes them in the signed manifest for tamper detection. **Must run after render** so file hashes cover all output formats.
 
 5. **`/resume-pack`** — Creates `bundle.zip` containing resume, manifest, signatures, and verification metadata.
 
-6. **`/resume-verify`** — Verifies a bundle's cryptographic signatures. Reports pass/fail for each signer.
+6. **`/resume-verify`** — Verifies a bundle's cryptographic signatures and file integrity. Uses signed `manifest.file_hashes` (not unsigned `verification.json`) for tamper detection. Reports INVALID if `file_hashes` is missing but resume files exist.
 
 ## What's Inside
 

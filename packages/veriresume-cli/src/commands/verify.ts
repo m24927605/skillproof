@@ -20,16 +20,13 @@ export interface VerifyResult {
 
 /**
  * List zip entries and reject if any path escapes the target directory.
+ * Uses `zipinfo -1` for machine-parseable output (one filename per line).
  * This runs BEFORE extraction so no malicious writes can occur.
  */
 async function assertSafeZipEntries(bundlePath: string): Promise<void> {
-  const { stdout } = await execFileAsync("unzip", ["-l", bundlePath]);
+  const { stdout } = await execFileAsync("zipinfo", ["-1", bundlePath]);
   for (const line of stdout.split("\n")) {
-    // unzip -l output format: "  Length  Date  Time  Name"
-    // Entry names are the last whitespace-delimited field
-    const match = line.match(/^\s*\d+\s+\d{2}-\d{2}-\d{2,4}\s+\d{2}:\d{2}\s+(.+)$/);
-    if (!match) continue;
-    const entryName = match[1].trim();
+    const entryName = line.trim();
     if (!entryName) continue;
 
     // Reject absolute paths, parent traversal, and backslash tricks
