@@ -137,18 +137,29 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
       }
 
       console.log(`  Reviewing ${name}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
-      const review = await reviewSkill(apiKey, name, filesToReview);
-      console.log(`  ${name}: ${review.quality_score} — ${review.reasoning}`);
+      try {
+        const review = await reviewSkill(apiKey, name, filesToReview);
+        console.log(`  ${name}: ${review.quality_score} — ${review.reasoning}`);
 
-      skills.push({
-        name,
-        confidence: review.quality_score,
-        evidence_ids: evs.map((e) => e.id),
-        inferred_by: "llm" as const,
-        strengths: review.strengths,
-        improvements: review.improvements,
-        reasoning: review.reasoning,
-      });
+        skills.push({
+          name,
+          confidence: review.quality_score,
+          evidence_ids: evs.map((e) => e.id),
+          inferred_by: "llm" as const,
+          strengths: review.strengths,
+          improvements: review.improvements,
+          reasoning: review.reasoning,
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.log(`  ${name}: code review failed (${message}), falling back to heuristic`);
+        skills.push({
+          name,
+          confidence: heuristicConfidence(evs),
+          evidence_ids: evs.map((e) => e.id),
+          inferred_by: "static" as const,
+        });
+      }
     }
   }
 
