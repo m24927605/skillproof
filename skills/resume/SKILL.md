@@ -33,7 +33,13 @@ All data is stored under `.skillproof/` in the target project directory:
     { "id": "string", "type": "commit|file|dependency|config|pull_request", "hash": "SHA-256", "timestamp": "ISO-8601", "ownership": 0.0-1.0, "source": "string", "metadata": {} }
   ],
   "skills": [
-    { "name": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"], "inferred_by": "static|llm", "strengths": ["string"], "reasoning": "string" }
+    {
+      "name": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"],
+      "inferred_by": "static|llm", "strengths": ["string"], "reasoning": "string",
+      "static_confidence": 0.0-1.0, "llm_confidence": 0.0-1.0,
+      "review_priority": 0.0-1.0, "review_decision": "static-only|llm-reviewed|cached-llm",
+      "evidence_digest": ["string"]
+    }
   ],
   "claims": [
     { "id": "string", "category": "language|framework|infrastructure|tool|practice", "skill": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"] }
@@ -119,7 +125,7 @@ Collect evidence from the current git repository and write the manifest.
 
 ### skillproof-infer
 
-Detect skills from evidence and score them via code review.
+Detect skills from evidence and score them using hybrid analysis: deterministic static scoring for all skills, with selective Claude code review for high-value or uncertain skills.
 
 1. **Read** `.skillproof/resume-manifest.json`.
 
@@ -149,23 +155,36 @@ Detect skills from evidence and score them via code review.
    | Code Review | type=pull_request |
    | Collaboration | type=pull_request |
 
-3. **Code review by Claude Code:**
-   - For each detected skill, find evidence items with `type=file`.
-   - Sort by `ownership` descending.
-   - Read the files using the Read tool (up to ~50K tokens worth of content per skill).
-   - Assess the author's proficiency:
-     - 0.9–1.0: Expert (clean architecture, advanced patterns, thorough error handling)
-     - 0.7–0.89: Proficient (solid code, good practices)
-     - 0.5–0.69: Familiar (functional, room for improvement)
-     - below 0.5: Beginner (basic usage)
-   - Set each skill's `confidence` to the assessed score.
-   - Set `inferred_by` to `"llm"` after review.
-   - Set `strengths` to an array of specific strengths observed (e.g., "Strong type definitions with interfaces and generics", "Comprehensive error handling with custom error types").
-   - Set `reasoning` to a brief explanation of the assessment (1-2 sentences).
+3. **Static quality analysis (all skills):**
+   - Run `analyzeStaticQuality()` on all evidence types (file, dependency, config, commit, snippet, PR).
+   - Produces `static_confidence` for every detected skill.
+   - Dependency/config-only skills receive a conservative cap (≤ 0.5).
+   - File ownership, tests, CI, linting, and type checking boost scores.
 
-4. **Write updated manifest** back to `.skillproof/resume-manifest.json`.
+4. **Review gating (selective LLM review):**
+   - Run `decideSkillReview()` to determine which skills warrant Claude code review.
+   - High-value skills (languages, frameworks, infrastructure, practices) are reviewed at mid-range confidence.
+   - Skills with strong static confidence and abundant evidence are skipped.
+   - Skills with too-weak evidence are skipped.
+   - Budget-constrained: `--max-review-tokens` limits total LLM spend.
+   - `--dry-run` shows the review/skip split without making LLM calls.
 
-5. **Report** all skills and their quality scores.
+5. **Code review by Claude (selected skills only):**
+   - For each skill selected for review, build a compact evidence digest (summary lines + code snippets).
+   - Group skills with file overlap; each skill gets its own digest section in the grouped prompt.
+   - Claude scores proficiency:
+     - 0.9–1.0: Expert  |  0.7–0.89: Proficient  |  0.5–0.69: Familiar  |  below 0.5: Beginner
+   - Results are cached per-skill (keyed by digest payload hash, prompt version, model).
+
+6. **Confidence merge:**
+   - LLM-reviewed skills: `confidence = static_confidence * 0.35 + llm_confidence * 0.65`
+   - Static-only skills: `confidence = static_confidence`
+   - `inferred_by`: `"llm"` if LLM participated, `"static"` otherwise.
+   - `review_decision`: `"static-only"`, `"llm-reviewed"`, or `"cached-llm"`.
+
+7. **Write updated manifest** back to `.skillproof/resume-manifest.json`.
+
+8. **Report** all skills with confidence, provenance, and review/static/cached breakdown.
 
 ### skillproof-render
 
