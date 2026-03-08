@@ -71,6 +71,65 @@ describe("pack", () => {
     assert.ok(files.includes("resume.pdf"));
   });
 
+  it("creates bundle.zip in outputDir when specified", async () => {
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+
+    const manifestPath = path.join(tempDir, ".skillproof", "resume-manifest.json");
+    await writeManifest(manifestPath, manifest);
+
+    // Put resume file in a separate output directory
+    const outDir = await mkdtemp(path.join(tmpdir(), "skillproof-packout-"));
+    await writeFile(path.join(outDir, "resume.md"), "# Test Resume\n", "utf8");
+
+    try {
+      await runPack(tempDir, outDir);
+
+      const outFiles = await readdir(outDir);
+      assert.ok(outFiles.includes("bundle.zip"), "bundle.zip should be in outputDir");
+
+      const cwdFiles = await readdir(tempDir);
+      assert.ok(!cwdFiles.includes("bundle.zip"), "bundle.zip should NOT be in cwd");
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("sign --output-dir + pack --output-dir produces a valid bundle", async () => {
+    const { runSign } = await import("./sign.ts");
+    const { verifyBundle } = await import("./verify.ts");
+
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+
+    const manifestPath = path.join(tempDir, ".skillproof", "resume-manifest.json");
+    await writeManifest(manifestPath, manifest);
+
+    // Resume lives in a separate output directory
+    const outDir = await mkdtemp(path.join(tmpdir(), "skillproof-signpack-"));
+    await writeFile(path.join(outDir, "resume.md"), "# Test Resume\n", "utf8");
+
+    try {
+      // Simulate: sign --output-dir out → pack --output-dir out
+      await runSign(tempDir, outDir);
+      await runPack(tempDir, outDir);
+
+      const result = await verifyBundle(path.join(outDir, "bundle.zip"));
+      assert.ok(result.valid, `bundle should be VALID but got INVALID (fileHashesMissing: ${result.fileHashesMissing}, tampered: ${result.tamperedFiles.join(", ")})`);
+      assert.ok(!result.fileHashesMissing, "manifest should contain file_hashes");
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
   it("throws when no resume file exists", async () => {
     const manifest = createEmptyManifest({
       repoUrl: null,

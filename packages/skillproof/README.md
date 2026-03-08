@@ -1,4 +1,4 @@
-# skillproof
+# Skill Proof
 
 Generate **verifiable developer resumes** from source code. Every skill claim is backed by concrete evidence — commits, dependencies, config files — with confidence scores and cryptographic signatures.
 

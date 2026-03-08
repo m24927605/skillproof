@@ -19,7 +19,7 @@ const program = new Command();
 program
   .name("skillproof")
   .description("Generate verifiable developer resumes from source code")
-  .version("1.0.0");
+  .version("1.1.1");
 
 program
   .command("scan")
@@ -64,15 +64,19 @@ program
 program
   .command("sign")
   .description("Sign resume manifest with Ed25519 key")
-  .action(async () => {
-    await runSign(process.cwd());
+  .option("-o, --output-dir <dir>", "Directory containing resume files (default: current directory)")
+  .action(async (options: { outputDir?: string }) => {
+    const outputDir = options.outputDir ? path.resolve(options.outputDir) : undefined;
+    await runSign(process.cwd(), outputDir);
   });
 
 program
   .command("pack")
   .description("Create distributable resume bundle")
-  .action(async () => {
-    await runPack(process.cwd());
+  .option("-o, --output-dir <dir>", "Directory containing resume files (default: current directory)")
+  .action(async (options: { outputDir?: string }) => {
+    const outputDir = options.outputDir ? path.resolve(options.outputDir) : undefined;
+    await runPack(process.cwd(), outputDir);
   });
 
 program

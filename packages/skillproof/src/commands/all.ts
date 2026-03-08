@@ -176,9 +176,12 @@ export async function runAll(
     };
     await runRender(workDir, locale, format, output, renderOpts);
 
+    // Resolve resume output directory (may differ from workDir when --output is used)
+    const resumeOutputDir = path.dirname(output);
+
     // Step 4: Sign (computes file_hashes for resume files automatically)
     step("Signing manifest");
-    await runSign(workDir);
+    await runSign(workDir, resumeOutputDir);
 
     // Step 5: Refresh verification block without another LLM call
     step("Refreshing verification block");
@@ -191,14 +194,14 @@ export async function runAll(
 
     // Step 6: Re-sign so file_hashes match the final rendered resume
     step("Finalizing signature");
-    await runSign(workDir);
+    await runSign(workDir, resumeOutputDir);
 
-    // Step 7: Pack
+    // Step 7: Pack — output bundle.zip in the same directory as the resume
     step("Packing bundle");
-    await runPack(workDir);
+    await runPack(workDir, resumeOutputDir);
 
     // Step 8: Verify
-    const bundlePath = path.join(workDir, "bundle.zip");
+    const bundlePath = path.join(resumeOutputDir, "bundle.zip");
     step("Verifying bundle");
     await runVerify(bundlePath);
 

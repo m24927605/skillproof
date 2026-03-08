@@ -77,8 +77,8 @@ async function loadOrGenerateKeys(cwd: string): Promise<KeyPair> {
   }
 }
 
-async function refreshMarkdownVerificationBlock(cwd: string, manifestPath: string): Promise<void> {
-  const resumePath = path.join(cwd, "resume.md");
+async function refreshMarkdownVerificationBlock(resumeDir: string, manifestPath: string): Promise<void> {
+  const resumePath = path.join(resumeDir, "resume.md");
   try {
     const current = await readFile(resumePath, "utf8");
     const marker = VERIFICATION_HEADERS
@@ -96,16 +96,17 @@ async function refreshMarkdownVerificationBlock(cwd: string, manifestPath: strin
   }
 }
 
-export async function runSign(cwd: string): Promise<void> {
+export async function runSign(cwd: string, resumeDir?: string): Promise<void> {
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
+  const scanDir = resumeDir || cwd;
 
   // Compute file_hashes for any resume files present (ensures split-step CLI flow is covered)
   const fileHashes: Record<string, string> = {};
   for (const filename of RESUME_FORMATS) {
     try {
-      await access(path.join(cwd, filename));
-      const content = await readFile(path.join(cwd, filename));
+      await access(path.join(scanDir, filename));
+      const content = await readFile(path.join(scanDir, filename));
       fileHashes[filename] = hashContent(content);
     } catch { /* doesn't exist */ }
   }
@@ -129,6 +130,6 @@ export async function runSign(cwd: string): Promise<void> {
 
   manifest.signatures = [signature];
   await writeManifest(manifestPath, manifest);
-  await refreshMarkdownVerificationBlock(cwd, manifestPath);
+  await refreshMarkdownVerificationBlock(scanDir, manifestPath);
   console.log("Manifest signed successfully.");
 }

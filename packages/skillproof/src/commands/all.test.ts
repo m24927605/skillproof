@@ -81,6 +81,28 @@ describe("runAll", () => {
     await access(path.join(tempDir, "bundle.zip"));
   });
 
+  it("outputs bundle.zip alongside resume when --output points to external directory", async () => {
+    const { runAll } = await import("./all.ts");
+    const { verifyBundle } = await import("./verify.ts");
+    const outDir = await mkdtemp(path.join(tmpdir(), "skillproof-outdir-"));
+
+    try {
+      const outputPath = path.join(outDir, "resume.md");
+      await runAll(tempDir, { scanMode: "current", format: "md", output: outputPath, skipLlm: true });
+
+      // Resume and bundle should be in the external output directory
+      await access(outputPath);
+      await access(path.join(outDir, "bundle.zip"));
+
+      // Bundle should pass verification (file_hashes must match)
+      const result = await verifyBundle(path.join(outDir, "bundle.zip"));
+      assert.ok(result.valid, `bundle should be VALID but got INVALID (tampered: ${result.tamperedFiles.join(", ")}, fileHashesMissing: ${result.fileHashesMissing})`);
+      assert.ok(!result.fileHashesMissing, "manifest should contain file_hashes");
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
   it("uses the multi-project parent directory for infer and downstream outputs", async () => {
     const { runAll } = await import("./all.ts");
     const launchDir = await mkdtemp(path.join(tmpdir(), "skillproof-launch-"));

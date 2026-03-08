@@ -7,16 +7,17 @@ import { hashContent } from "../core/hashing.ts";
 
 const RESUME_FORMATS = ["resume.md", "resume.pdf", "resume.png", "resume.jpg", "resume.jpeg"];
 
-export async function runPack(cwd: string): Promise<void> {
+export async function runPack(cwd: string, outputDir?: string): Promise<void> {
   const manifestPath = getManifestPath(cwd);
-  const bundlePath = path.join(cwd, "bundle.zip");
+  const resumeDir = outputDir || cwd;
+  const bundlePath = path.join(resumeDir, "bundle.zip");
 
   await access(manifestPath);
 
   const resumeFiles: string[] = [];
   for (const filename of RESUME_FORMATS) {
     try {
-      await access(path.join(cwd, filename));
+      await access(path.join(resumeDir, filename));
       resumeFiles.push(filename);
     } catch { /* doesn't exist */ }
   }
@@ -29,7 +30,7 @@ export async function runPack(cwd: string): Promise<void> {
 
   const fileHashes: Record<string, string> = {};
   for (const filename of resumeFiles) {
-    const content = await readFile(path.join(cwd, filename));
+    const content = await readFile(path.join(resumeDir, filename));
     fileHashes[filename] = hashContent(content);
   }
 
@@ -56,7 +57,7 @@ export async function runPack(cwd: string): Promise<void> {
     archive.pipe(output);
 
     for (const filename of resumeFiles) {
-      archive.file(path.join(cwd, filename), { name: filename });
+      archive.file(path.join(resumeDir, filename), { name: filename });
     }
     archive.file(manifestPath, { name: "resume-manifest.json" });
     archive.append(JSON.stringify(verification, null, 2), { name: "verification.json" });
