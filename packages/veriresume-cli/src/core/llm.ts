@@ -31,13 +31,23 @@ Rules:
   - 0.7–0.89: Proficient level
   - 0.5–0.69: Familiar level
   - Below 0.5: Beginner level
+- Use the provided strengths and assessment to describe what the developer actually did with each technology. Be specific and grounded in the evidence.
 - Do NOT fabricate skills or experiences not present in the data.
 - Do NOT include evidence IDs.
 - If personal info is provided, integrate it naturally.
 - Output pure Markdown only. No code fences around the output.`;
 
   const skillLines = skills
-    .map((s) => `- ${s.name} (confidence: ${s.confidence}, evidence count: ${s.evidence_ids.length}, inferred by: ${s.inferred_by})`)
+    .map((s) => {
+      let line = `- ${s.name} (confidence: ${s.confidence}, evidence count: ${s.evidence_ids.length}, inferred by: ${s.inferred_by})`;
+      if (s.strengths && s.strengths.length > 0) {
+        line += `\n  Strengths: ${s.strengths.join("; ")}`;
+      }
+      if (s.reasoning) {
+        line += `\n  Assessment: ${s.reasoning}`;
+      }
+      return line;
+    })
     .join("\n");
 
   const authorName = display?.displayName || manifest.author.name;

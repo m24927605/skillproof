@@ -56,6 +56,45 @@ describe("llm", () => {
       assert.ok(userMessage.includes("None"));
     });
 
+    it("includes strengths and reasoning in user message when available", () => {
+      const manifestWithReview: Manifest = {
+        ...manifest,
+        skills: [
+          {
+            name: "TypeScript",
+            confidence: 0.85,
+            evidence_ids: ["EV-2"],
+            inferred_by: "llm",
+            strengths: ["Strong type definitions", "Good error handling"],
+            reasoning: "Demonstrates solid TypeScript proficiency with strict typing",
+          },
+        ],
+      };
+      const { userMessage } = buildPromptMessages(manifestWithReview, "en-US", null);
+      assert.ok(userMessage.includes("Strong type definitions"));
+      assert.ok(userMessage.includes("Good error handling"));
+      assert.ok(userMessage.includes("Demonstrates solid TypeScript proficiency"));
+    });
+
+    it("does not include improvements in user message", () => {
+      const manifestWithReview: Manifest = {
+        ...manifest,
+        skills: [
+          {
+            name: "TypeScript",
+            confidence: 0.85,
+            evidence_ids: ["EV-2"],
+            inferred_by: "llm",
+            strengths: ["Good code"],
+            improvements: ["Needs more tests"],
+            reasoning: "OK",
+          },
+        ],
+      };
+      const { userMessage } = buildPromptMessages(manifestWithReview, "en-US", null);
+      assert.ok(!userMessage.includes("Needs more tests"));
+    });
+
     it("uses displayName and contactEmail when provided", () => {
       const { userMessage } = buildPromptMessages(manifest, "en-US", null, {
         displayName: "Bob Smith",
