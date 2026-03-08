@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildReviewPrompt, parseReviewResponse, buildGroupedReviewPrompt, parseGroupedReviewResponse, buildDigestReviewPrompt, buildGroupedDigestReviewPrompt } from "./code-review.ts";
+import { buildReviewPrompt, parseReviewResponse, parseGroupedReviewResponse, buildDigestReviewPrompt, buildGroupedDigestReviewPrompt } from "./code-review.ts";
 import type { EvidenceDigest } from "./evidence-digest.ts";
 
 describe("code-review", () => {
@@ -52,21 +52,6 @@ describe("code-review", () => {
 
     it("throws on invalid response", () => {
       assert.throws(() => parseReviewResponse("not json at all"), /Failed to parse/);
-    });
-  });
-
-  describe("buildGroupedReviewPrompt", () => {
-    it("includes all skill names and file contents", () => {
-      const files = [
-        { path: "src/app.tsx", content: "export default App;", ownership: 0.9, skill: "React" },
-        { path: "src/index.ts", content: "const x = 1;", ownership: 0.8, skill: "TypeScript" },
-      ];
-      const { systemMessage, userMessage } = buildGroupedReviewPrompt(["TypeScript", "React"], files);
-      assert.ok(systemMessage.includes("EACH"));
-      assert.ok(systemMessage.includes("TypeScript, React"));
-      assert.ok(userMessage.includes("TypeScript, React"));
-      assert.ok(userMessage.includes("src/app.tsx"));
-      assert.ok(userMessage.includes("src/index.ts"));
     });
   });
 
