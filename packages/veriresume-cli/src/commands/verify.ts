@@ -1,4 +1,4 @@
-import { readFile, readdir, realpath, mkdtemp, rm } from "node:fs/promises";
+import { readFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -18,16 +18,34 @@ export interface VerifyResult {
 }
 
 /**
- * Check all extracted files are within the extract directory (Zip Slip protection).
+ * List zip entries and reject if any path escapes the target directory.
+ * This runs BEFORE extraction so no malicious writes can occur.
  */
-async function assertNoPathTraversal(extractDir: string): Promise<void> {
-  const realExtractDir = await realpath(extractDir);
-  const entries = await readdir(extractDir, { recursive: true, withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(entry.parentPath ?? entry.path, entry.name);
-    const resolvedPath = await realpath(fullPath);
-    if (!resolvedPath.startsWith(realExtractDir + path.sep) && resolvedPath !== realExtractDir) {
-      throw new Error(`Zip Slip detected: ${entry.name} escapes extraction directory`);
+async function assertSafeZipEntries(bundlePath: string): Promise<void> {
+  const { stdout } = await execFileAsync("unzip", ["-l", bundlePath]);
+  for (const line of stdout.split("\n")) {
+    // unzip -l output format: "  Length  Date  Time  Name"
+    // Entry names are the last whitespace-delimited field
+    const match = line.match(/^\s*\d+\s+\d{2}-\d{2}-\d{2,4}\s+\d{2}:\d{2}\s+(.+)$/);
+    if (!match) continue;
+    const entryName = match[1].trim();
+    if (!entryName) continue;
+
+    // Reject absolute paths, parent traversal, and backslash tricks
+    if (
+      path.isAbsolute(entryName) ||
+      entryName.startsWith("../") ||
+      entryName.includes("/../") ||
+      entryName.startsWith("..\\") ||
+      entryName.includes("\\..\\")
+    ) {
+      throw new Error(`Zip Slip detected: unsafe entry "${entryName}"`);
+    }
+
+    // Resolve against a dummy root and verify it stays within
+    const resolved = path.resolve("/safe-root", entryName);
+    if (!resolved.startsWith("/safe-root/") && resolved !== "/safe-root") {
+      throw new Error(`Zip Slip detected: entry "${entryName}" escapes extraction directory`);
     }
   }
 }
@@ -36,10 +54,10 @@ export async function verifyBundle(bundlePath: string): Promise<VerifyResult> {
   const extractDir = await mkdtemp(path.join(tmpdir(), "veriresume-verify-"));
 
   try {
-    await execFileAsync("unzip", ["-o", bundlePath, "-d", extractDir]);
+    // Zip Slip protection: validate all entries BEFORE extraction
+    await assertSafeZipEntries(bundlePath);
 
-    // Zip Slip protection: verify all files remain within extractDir
-    await assertNoPathTraversal(extractDir);
+    await execFileAsync("unzip", ["-o", bundlePath, "-d", extractDir]);
 
     const manifestContent = await readFile(
       path.join(extractDir, "resume-manifest.json"),
