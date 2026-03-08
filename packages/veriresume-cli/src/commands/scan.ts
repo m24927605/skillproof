@@ -188,13 +188,15 @@ export async function scanRepo(cwd: string, authorEmails?: string[]): Promise<Sc
     }
   }
 
-  // Extract config files
+  // Extract config files (filter both path and content for secrets)
   const configFiles: { path: string; content: string }[] = [];
   for (const filePath of trackedFiles) {
     if (CONFIG_PATTERNS.some((p) => p.test(filePath)) && !isSensitivePath(filePath)) {
       try {
         const content = await readFile(path.join(cwd, filePath), "utf8");
-        configFiles.push({ path: filePath, content });
+        if (!containsSecrets(content)) {
+          configFiles.push({ path: filePath, content });
+        }
       } catch {
         // skip
       }

@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
-export function hashContent(content: string): string {
+export function hashContent(content: string | Buffer): string {
+  if (Buffer.isBuffer(content)) {
+    return createHash("sha256").update(content).digest("hex");
+  }
   return createHash("sha256").update(content, "utf8").digest("hex");
 }
 

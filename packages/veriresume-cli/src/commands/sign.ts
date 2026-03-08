@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat, chmod } from "node:fs/promises";
 import path from "node:path";
 import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
 import { canonicalJson } from "../core/hashing.ts";
@@ -55,6 +55,14 @@ async function loadOrGenerateKeys(cwd: string): Promise<KeyPair> {
   try {
     const publicKey = await readFile(pubPath, "utf8");
     const privateKey = await readFile(privPath, "utf8");
+
+    // Enforce strict permissions on private key (fix overly permissive existing files)
+    const privStat = await stat(privPath);
+    const mode = privStat.mode & 0o777;
+    if (mode !== 0o600) {
+      await chmod(privPath, 0o600);
+    }
+
     return { publicKey, privateKey };
   } catch {
     console.log("No existing keys found. Generating new Ed25519 key pair...");

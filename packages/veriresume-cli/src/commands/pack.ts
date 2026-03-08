@@ -30,7 +30,7 @@ export async function runPack(cwd: string): Promise<void> {
   const fileHashes: Record<string, string> = {};
   for (const filename of resumeFiles) {
     const content = await readFile(path.join(cwd, filename));
-    fileHashes[filename] = hashContent(content.toString("utf8"));
+    fileHashes[filename] = hashContent(content);
   }
 
   const verification = {
