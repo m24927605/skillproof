@@ -3,9 +3,14 @@ import { readFile, writeFile, mkdir, stat, chmod, access } from "node:fs/promise
 import path from "node:path";
 import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
 import { canonicalJson, hashContent } from "../core/hashing.ts";
+import { buildVerificationBlock } from "../core/verification.ts";
 import type { Signature } from "../types/manifest.ts";
 
 const RESUME_FORMATS = ["resume.md", "resume.pdf", "resume.png", "resume.jpg", "resume.jpeg"];
+const VERIFICATION_HEADERS = [
+  "\n---\n\n## SkillProof Verification\n\n",
+  "\n---\n\n## VeriResume Verification\n\n",
+];
 
 export interface KeyPair {
   publicKey: string;
@@ -72,6 +77,25 @@ async function loadOrGenerateKeys(cwd: string): Promise<KeyPair> {
   }
 }
 
+async function refreshMarkdownVerificationBlock(cwd: string, manifestPath: string): Promise<void> {
+  const resumePath = path.join(cwd, "resume.md");
+  try {
+    const current = await readFile(resumePath, "utf8");
+    const marker = VERIFICATION_HEADERS
+      .map((h) => ({ h, i: current.indexOf(h) }))
+      .filter((x) => x.i >= 0)
+      .sort((a, b) => a.i - b.i)[0];
+    if (!marker) return;
+
+    const manifest = await readManifest(manifestPath);
+    const block = buildVerificationBlock(manifest);
+    const next = `${current.slice(0, marker.i)}${block}`;
+    await writeFile(resumePath, next, "utf8");
+  } catch {
+    // resume.md missing or unreadable: skip
+  }
+}
+
 export async function runSign(cwd: string): Promise<void> {
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
@@ -105,5 +129,6 @@ export async function runSign(cwd: string): Promise<void> {
 
   manifest.signatures = [signature];
   await writeManifest(manifestPath, manifest);
+  await refreshMarkdownVerificationBlock(cwd, manifestPath);
   console.log("Manifest signed successfully.");
 }
