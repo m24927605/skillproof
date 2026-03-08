@@ -33,7 +33,7 @@ All data is stored under `.veriresume/` in the target project directory:
     { "id": "string", "type": "commit|file|dependency|config|pull_request", "hash": "SHA-256", "timestamp": "ISO-8601", "ownership": 0.0-1.0, "source": "string", "metadata": {} }
   ],
   "skills": [
-    { "name": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"], "inferred_by": "static|llm" }
+    { "name": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"], "inferred_by": "static|llm", "strengths": ["string"], "improvements": ["string"], "reasoning": "string" }
   ],
   "claims": [
     { "id": "string", "category": "language|framework|infrastructure|tool|practice", "skill": "string", "confidence": 0.0-1.0, "evidence_ids": ["string"] }
@@ -150,8 +150,9 @@ Detect skills from evidence and score them via code review.
    | Collaboration | type=pull_request |
 
 3. **Code review by Claude Code:**
-   - For each detected skill, find evidence items with `type=file` and `ownership > 0.5`.
-   - Read the top 3 files (by ownership, highest first) using the Read tool.
+   - For each detected skill, find evidence items with `type=file`.
+   - Sort by `ownership` descending.
+   - Read the files using the Read tool (up to ~50K tokens worth of content per skill).
    - Assess the author's proficiency:
      - 0.9–1.0: Expert (clean architecture, advanced patterns, thorough error handling)
      - 0.7–0.89: Proficient (solid code, good practices)
@@ -159,6 +160,9 @@ Detect skills from evidence and score them via code review.
      - below 0.5: Beginner (basic usage)
    - Set each skill's `confidence` to the assessed score.
    - Set `inferred_by` to `"llm"` after review.
+   - Set `strengths` to an array of specific strengths observed (e.g., "Strong type definitions with interfaces and generics", "Comprehensive error handling with custom error types").
+   - Set `improvements` to an array of areas for improvement (e.g., "Some functions lack input validation").
+   - Set `reasoning` to a brief explanation of the assessment (1-2 sentences).
 
 4. **Write updated manifest** back to `.veriresume/resume-manifest.json`.
 
@@ -187,6 +191,8 @@ Generate a professional resume from the manifest.
      - below 0.5 → Beginner / 初學 / 初級
    - Do NOT fabricate skills or experiences not in the manifest.
    - Do NOT include evidence IDs in the resume body.
+   - Use the `strengths` and `reasoning` fields from each skill to describe what the developer actually did with each technology. Be specific and grounded in the code review evidence.
+   - Do NOT include `improvements` in the resume output. These are for the developer's private reference only.
    - Integrate personal info naturally if provided.
    - Output format: Markdown.
 
