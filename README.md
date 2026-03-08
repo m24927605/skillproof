@@ -96,7 +96,7 @@ Run `skillproof all` (CLI) or `/skillproof-all` (Claude Code plugin) to execute 
 
 1. **`/skillproof-scan`** — Scans your git history, files, dependencies, and config. Builds an evidence graph and writes the manifest to `.skillproof/resume-manifest.json`.
 
-2. **`/skillproof-infer`** — Infers skills from evidence. First pass uses static signal rules (Dockerfile = Docker, redis dep = Redis, etc.). Second pass uses Claude's reasoning for deeper skills (architecture, testing practices, CI/CD maturity). Supports `--dry-run` for cost estimation without API calls.
+2. **`/skillproof-infer`** — Infers skills from evidence using hybrid analysis. All skills receive a deterministic `static_confidence` score. A review gating policy selects high-value or uncertain skills for Claude code review; the rest are scored statically. Reviewed skills get a blended confidence (35% static + 65% LLM). `--dry-run` shows the review/skip split and cost estimate without making API calls.
 
 3. **`/skillproof-render`** — Generates `resume.md` from the manifest. Skills sorted by confidence, each linked to evidence entries.
 
@@ -124,10 +124,20 @@ Run `skillproof all` (CLI) or `/skillproof-all` (Claude Code plugin) to execute 
 | `aws-sdk` dependency | AWS |
 | ...and more | |
 
-**LLM reasoning (via Claude):**
-- Architecture patterns (microservices, monolith, event-driven)
-- Testing practices (TDD, integration, e2e)
-- Code quality signals (linting, formatting, CI/CD maturity)
+**Deterministic quality analysis (all skills):**
+- File ownership, test presence, CI/CD, linting, type checking
+- Conservative scoring for dependency/config-only skills
+- Accepts all evidence types: file, dependency, config, commit, snippet, PR
+
+**Review gating (selective LLM):**
+- High-value skills (languages, frameworks, infrastructure) reviewed at mid-range confidence
+- Strong/overdetermined skills and weak-evidence skills skip LLM
+- Budget-controlled via `--max-review-tokens`
+
+**LLM reasoning (via Claude, selected skills only):**
+- Compact evidence digests replace raw file dumps (lower token cost)
+- Architecture patterns, testing practices, code quality
+- Results cached per-skill for fast reruns
 
 ### Evidence Model
 
@@ -210,7 +220,7 @@ cd packages/skillproof
 npm test
 ```
 
-154 tests covering every module plus a full pipeline integration test (scan -> infer -> render -> sign -> pack -> verify).
+190+ tests covering every module plus a full pipeline integration test (scan -> infer -> render -> sign -> pack -> verify).
 
 ## Updating
 

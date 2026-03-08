@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { estimateTokens, estimateCost, truncateFileContent, buildEstimateDisplay, buildCostPreviewDisplay } from "./token-estimate.ts";
 import type { FileForReview } from "./token-estimate.ts";
 import { groupSkillsByFileOverlap } from "./skill-grouping.ts";
+import { buildEvidenceDigest } from "./evidence-digest.ts";
+import { analyzeStaticQuality } from "./static-quality.ts";
+import type { Evidence } from "../types/manifest.ts";
 
 describe("token-estimate", () => {
   describe("estimateTokens", () => {
@@ -80,8 +83,74 @@ describe("token-estimate", () => {
       };
       const display = buildCostPreviewDisplay(preview);
       assert.ok(display.includes("Cache hits: 3/5"));
-      assert.ok(display.includes("Actual reviews needed: 2"));
       assert.ok(display.includes("$0.19"));
+    });
+  });
+
+  describe("buildCostPreviewDisplay with gating", () => {
+    it("shows review/skip split when gating info provided", () => {
+      const preview = {
+        totalGroups: 3,
+        cachedGroups: 0,
+        totalInputTokens: 80000,
+        actualInputTokens: 80000,
+        totalOutputTokens: 600,
+        actualOutputTokens: 600,
+        totalCost: 0.249,
+        actualCost: 0.249,
+        totalDetectedSkills: 12,
+        selectedForReview: 4,
+        staticOnlySkills: 8,
+      };
+      const display = buildCostPreviewDisplay(preview);
+      assert.ok(display.includes("12"), "should include total detected");
+      assert.ok(display.includes("4"), "should include selected for review");
+      assert.ok(display.includes("8"), "should include static-only count");
+      assert.ok(display.includes("static-only") || display.includes("Static-only"), "should mention static-only");
+    });
+  });
+
+  describe("buildCostPreviewDisplay with per-skill cache", () => {
+    it("partial-cache group shows lower actual cost than total", () => {
+      const preview = {
+        totalGroups: 2,
+        cachedGroups: 0,
+        totalInputTokens: 100000,
+        actualInputTokens: 30000,
+        totalOutputTokens: 600,
+        actualOutputTokens: 200,
+        totalCost: 0.309,
+        actualCost: 0.093,
+        totalReviewSkills: 3,
+        cachedReviewSkills: 2,
+      };
+      const display = buildCostPreviewDisplay(preview);
+      assert.ok(display.includes("Cached skills: 2/3"));
+      assert.ok(display.includes("Skills needing review: 1"));
+      assert.ok(display.includes("$0.09"));
+    });
+
+    it("full group hits and full misses remain stable", () => {
+      // All cached
+      const allCached = buildCostPreviewDisplay({
+        totalGroups: 2, cachedGroups: 2,
+        totalInputTokens: 50000, actualInputTokens: 0,
+        totalOutputTokens: 400, actualOutputTokens: 0,
+        totalCost: 0.156, actualCost: 0,
+        totalReviewSkills: 2, cachedReviewSkills: 2,
+      });
+      assert.ok(allCached.includes("Cached skills: 2/2"));
+      assert.ok(allCached.includes("$0.00"));
+
+      // No cache
+      const noneDisplay = buildCostPreviewDisplay({
+        totalGroups: 2, cachedGroups: 0,
+        totalInputTokens: 80000, actualInputTokens: 80000,
+        totalOutputTokens: 600, actualOutputTokens: 600,
+        totalCost: 0.249, actualCost: 0.249,
+      });
+      assert.ok(!noneDisplay.includes("Cached skills"));
+      assert.ok(!noneDisplay.includes("Actual estimated cost"));
     });
   });
 
@@ -147,52 +216,90 @@ describe("token-estimate", () => {
       assert.equal(dockerGroup.files.length, 1);
     });
 
-    it("end-to-end cost estimate matches expected values", () => {
-      // Simulate the infer.ts cost preview pipeline:
-      // 1. Truncate files and sum tokens per group
-      // 2. Compute cost with OUTPUT_TOKENS_PER_SKILL = 200 per skill
+    it("end-to-end digest-based cost estimate matches expected values", () => {
+      // Simulate the infer.ts cost preview pipeline (digest-based):
+      // 1. Build digests from evidence + file contents
+      // 2. Estimate tokens from digest payload (summary lines + snippet blocks)
+      // 3. Compute cost with OUTPUT_TOKENS_PER_SKILL = 200 per skill
 
       const OUTPUT_TOKENS_PER_SKILL = 200;
 
-      // Group 1: TypeScript+React — 4 unique files
-      const group1Files = [TSX_CONTENT, TS_CONTENT, LONG_FILE, TSX_CONTENT]; // App.tsx, utils.ts, long.ts, Component.tsx
-      const group1Tokens = group1Files.reduce(
-        (sum, content) => sum + estimateTokens(truncateFileContent(content)), 0
-      );
-      // Group 2: Docker — 1 file
-      const group2Tokens = estimateTokens(truncateFileContent(DOCKERFILE));
+      // Build file contents cache (truncated, as infer.ts does)
+      const fileContentsCache = new Map<string, string>();
+      fileContentsCache.set("src/App.tsx", truncateFileContent(TSX_CONTENT));
+      fileContentsCache.set("src/utils.ts", truncateFileContent(TS_CONTENT));
+      fileContentsCache.set("src/long.ts", truncateFileContent(LONG_FILE));
+      fileContentsCache.set("src/Component.tsx", truncateFileContent(TSX_CONTENT));
+      fileContentsCache.set("Dockerfile", truncateFileContent(DOCKERFILE));
 
-      const totalInputTokens = group1Tokens + group2Tokens;
-      const totalSkills = 3; // TypeScript, React, Docker
+      // Build evidence for each skill
+      const tsEvidence: Evidence[] = [
+        { id: "EV-FILE-1", type: "file", hash: "a", timestamp: "t", ownership: 0.9, source: "src/App.tsx" },
+        { id: "EV-FILE-2", type: "file", hash: "b", timestamp: "t", ownership: 0.85, source: "src/utils.ts" },
+        { id: "EV-FILE-3", type: "file", hash: "c", timestamp: "t", ownership: 0.7, source: "src/long.ts" },
+      ];
+      const reactEvidence: Evidence[] = [
+        { id: "EV-FILE-4", type: "file", hash: "d", timestamp: "t", ownership: 0.9, source: "src/App.tsx" },
+        { id: "EV-FILE-5", type: "file", hash: "e", timestamp: "t", ownership: 0.8, source: "src/Component.tsx" },
+      ];
+      const dockerEvidence: Evidence[] = [
+        { id: "EV-CONFIG-1", type: "config", hash: "f", timestamp: "t", ownership: 1.0, source: "Dockerfile" },
+      ];
+
+      // Build digests (as infer.ts does during pre-compute)
+      const tsDigest = buildEvidenceDigest("TypeScript", tsEvidence, analyzeStaticQuality("TypeScript", tsEvidence), fileContentsCache);
+      const reactDigest = buildEvidenceDigest("React", reactEvidence, analyzeStaticQuality("React", reactEvidence), fileContentsCache);
+      const dockerDigest = buildEvidenceDigest("Docker", dockerEvidence, analyzeStaticQuality("Docker", dockerEvidence), fileContentsCache);
+
+      // Estimate tokens from digest payloads (matching infer.ts logic)
+      function digestTokens(d: typeof tsDigest): number {
+        const text = d.summaryLines.join("\n") + d.snippetBlocks.map((b) => b.content).join("\n");
+        return estimateTokens(text);
+      }
+
+      const tsTokens = digestTokens(tsDigest);
+      const reactTokens = digestTokens(reactDigest);
+      const dockerTokens = digestTokens(dockerDigest);
+
+      const totalInputTokens = tsTokens + reactTokens + dockerTokens;
+      const totalSkills = 3;
       const totalOutputTokens = totalSkills * OUTPUT_TOKENS_PER_SKILL;
       const totalCost = estimateCost(totalInputTokens, totalOutputTokens);
 
-      // Snapshot assertions — if any formula changes, these fail
-      assert.equal(group1Tokens, 2592); // 540 + 1020 + 492 + 540
-      assert.equal(group2Tokens, 13);
-      assert.equal(totalInputTokens, 2605);
-      assert.equal(totalOutputTokens, 600);
-      assert.ok(Math.abs(totalCost - 0.016815) < 0.000001, `Cost $${totalCost} != expected $0.016815`);
+      // Digest tokens should be much smaller than raw file tokens
+      // (digest caps at 5 snippets * 2000 chars each = ~2500 tokens max per skill)
+      assert.ok(tsTokens > 0, "TypeScript digest should have tokens");
+      assert.ok(reactTokens > 0, "React digest should have tokens");
+      assert.ok(totalInputTokens < 10000, `Digest tokens ${totalInputTokens} should be well under 10K`);
 
-      // Verify cost stays under $0.02 for this fixture (sanity bound)
-      assert.ok(totalCost < 0.02, `Cost $${totalCost} exceeds $0.02 budget for fixture`);
+      // Cost should be very low for this fixture
+      assert.ok(totalCost < 0.05, `Cost $${totalCost} exceeds $0.05 for fixture`);
     });
 
-    it("50K per-skill budget is not exceeded by fixture", () => {
-      const TOKEN_BUDGET_PER_SKILL = 50_000;
+    it("digest payload is bounded by MAX_SNIPPETS and MAX_SNIPPET_CHARS", () => {
+      // Even with many large files, digest is bounded
+      const fileContents = new Map<string, string>();
+      const evidence: Evidence[] = [];
+      for (let i = 0; i < 20; i++) {
+        const path = `src/file${i}.ts`;
+        fileContents.set(path, "x".repeat(5000)); // large files
+        evidence.push({ id: `EV-FILE-${i}`, type: "file", hash: `h${i}`, timestamp: "t", ownership: 0.9, source: path });
+      }
 
-      // Largest group: TypeScript+React (2 skills) -> budget = 100K
-      const group1Budget = TOKEN_BUDGET_PER_SKILL * 2;
-      const group1Tokens = [TSX_CONTENT, TS_CONTENT, LONG_FILE, TSX_CONTENT].reduce(
-        (sum, content) => sum + estimateTokens(truncateFileContent(content)), 0
-      );
-      assert.ok(group1Tokens < group1Budget,
-        `Group tokens ${group1Tokens} exceed budget ${group1Budget}`);
+      const digest = buildEvidenceDigest("TypeScript", evidence, analyzeStaticQuality("TypeScript", evidence), fileContents);
 
-      // Docker group: 1 skill -> budget = 50K
-      const dockerTokens = estimateTokens(truncateFileContent(DOCKERFILE));
-      assert.ok(dockerTokens < TOKEN_BUDGET_PER_SKILL,
-        `Docker tokens ${dockerTokens} exceed budget ${TOKEN_BUDGET_PER_SKILL}`);
+      // MAX_SNIPPETS = 5
+      assert.ok(digest.snippetBlocks.length <= 5, `Snippets ${digest.snippetBlocks.length} should be <= 5`);
+
+      // Each snippet is bounded by MAX_SNIPPET_CHARS = 2000
+      for (const block of digest.snippetBlocks) {
+        assert.ok(block.content.length <= 2000, `Snippet ${block.path} is ${block.content.length} chars, should be <= 2000`);
+      }
+
+      // Total digest tokens should be well-bounded
+      const text = digest.summaryLines.join("\n") + digest.snippetBlocks.map((b) => b.content).join("\n");
+      const tokens = estimateTokens(text);
+      assert.ok(tokens < 3000, `Digest tokens ${tokens} should be < 3000 (5 snippets * 500 tokens + overhead)`);
     });
   });
 });

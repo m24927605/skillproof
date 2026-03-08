@@ -36,11 +36,16 @@ Rules:
 - Do NOT fabricate skills or experiences not present in the data.
 - Do NOT include evidence IDs.
 - If personal info is provided, integrate it naturally.
-- Output pure Markdown only. No code fences around the output.`;
+- Output pure Markdown only. No code fences around the output.
+
+Provenance-aware rendering:
+- If a skill's review_decision is "static-only", describe it conservatively from the evidence count and avoid strong proficiency claims. Do not fabricate detailed capability narratives.
+- If a skill's review_decision is "llm-reviewed" or "cached-llm", you may use the provided strengths and reasoning to describe demonstrated capability more directly.`;
 
   const skillLines = skills
     .map((s) => {
-      let line = `- ${s.name} (confidence: ${s.confidence}, evidence count: ${s.evidence_ids.length}, inferred by: ${s.inferred_by})`;
+      const decision = s.review_decision ?? (s.inferred_by === "llm" ? "llm-reviewed" : "static-only");
+      let line = `- ${s.name} (confidence: ${s.confidence}, evidence count: ${s.evidence_ids.length}, review_decision: ${decision})`;
       if (s.strengths && s.strengths.length > 0) {
         line += `\n  Strengths: ${s.strengths.join("; ")}`;
       }

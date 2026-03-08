@@ -13,10 +13,16 @@ export function mergeSkills(skills: Skill[]): Skill[] {
   for (const skill of skills) {
     const existing = map.get(skill.name);
     if (existing) {
+      const mergedEvidenceIds = [...existing.evidence_ids, ...skill.evidence_ids];
       if (skill.confidence > existing.confidence) {
-        existing.confidence = skill.confidence;
+        // Replace with higher-confidence skill's metadata, merge evidence_ids
+        map.set(skill.name, {
+          ...skill,
+          evidence_ids: mergedEvidenceIds,
+        });
+      } else {
+        existing.evidence_ids = mergedEvidenceIds;
       }
-      existing.evidence_ids.push(...skill.evidence_ids);
     } else {
       map.set(skill.name, {
         ...skill,

@@ -106,6 +106,13 @@ export interface CostPreview {
   actualOutputTokens: number;
   totalCost: number;
   actualCost: number;
+  totalDetectedSkills?: number;
+  selectedForReview?: number;
+  staticOnlySkills?: number;
+  /** Total skills selected for review (across all groups) */
+  totalReviewSkills?: number;
+  /** Skills with cache hits (group-level or per-skill) */
+  cachedReviewSkills?: number;
 }
 
 export function buildCostPreviewDisplay(preview: CostPreview): string {
@@ -113,14 +120,30 @@ export function buildCostPreviewDisplay(preview: CostPreview): string {
 
   let display = `\nCode Review Cost Estimate\n`;
   display += `${"─".repeat(40)}\n`;
+
+  if (preview.totalDetectedSkills != null) {
+    display += `  Total detected skills: ${preview.totalDetectedSkills}\n`;
+    display += `  Selected for LLM review: ${preview.selectedForReview ?? 0}\n`;
+    display += `  Static-only (skipped): ${preview.staticOnlySkills ?? 0}\n`;
+    display += `\n`;
+  }
+
   display += `  Review groups: ${preview.totalGroups}\n`;
   display += `  Estimated input tokens: ${formatTokens(preview.totalInputTokens)}\n`;
   display += `  Estimated output tokens: ${formatTokens(preview.totalOutputTokens)}\n`;
   display += `  Estimated total cost: $${preview.totalCost.toFixed(2)}\n`;
 
-  if (preview.cachedGroups > 0) {
-    display += `\n  Cache hits: ${preview.cachedGroups}/${preview.totalGroups} groups\n`;
-    display += `  Actual reviews needed: ${preview.totalGroups - preview.cachedGroups}\n`;
+  const hasCacheSavings = preview.actualCost < preview.totalCost;
+  if (hasCacheSavings) {
+    display += `\n`;
+    if (preview.cachedGroups > 0) {
+      display += `  Cache hits: ${preview.cachedGroups}/${preview.totalGroups} groups\n`;
+    }
+    if (preview.totalReviewSkills != null && preview.cachedReviewSkills != null && preview.cachedReviewSkills > 0) {
+      const uncachedSkills = preview.totalReviewSkills - preview.cachedReviewSkills;
+      display += `  Cached skills: ${preview.cachedReviewSkills}/${preview.totalReviewSkills}\n`;
+      display += `  Skills needing review: ${uncachedSkills}\n`;
+    }
     display += `  Actual estimated cost: $${preview.actualCost.toFixed(2)}\n`;
   }
 

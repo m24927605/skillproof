@@ -94,18 +94,118 @@ describe("infer", () => {
     assert.equal(saved.skills[0].reasoning, "Solid TypeScript usage");
   });
 
-  it("splitFilesIntoBatches limits each batch by input tokens", async () => {
-    const { splitFilesIntoBatches } = await import("./infer.ts");
-
-    const files = [
-      { path: "a.ts", content: "a".repeat(40000), ownership: 1, skill: "TypeScript" },
-      { path: "b.ts", content: "b".repeat(40000), ownership: 1, skill: "TypeScript" },
-      { path: "c.ts", content: "c".repeat(40000), ownership: 1, skill: "TypeScript" },
+  it("Skill type accepts hybrid scoring fields", async () => {
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+    manifest.skills = [
+      {
+        name: "TypeScript",
+        confidence: 0.72,
+        evidence_ids: ["EV-1"],
+        inferred_by: "llm",
+        strengths: ["Type safety"],
+        reasoning: "Strong usage",
+        static_confidence: 0.6,
+        llm_confidence: 0.85,
+        review_priority: 0.9,
+        review_decision: "llm-reviewed",
+        evidence_digest: ["Owned 4 TypeScript files", "Has tests covering API handlers"],
+      },
+      {
+        name: "Docker",
+        confidence: 0.45,
+        evidence_ids: ["EV-2"],
+        inferred_by: "static",
+        static_confidence: 0.45,
+        review_decision: "static-only",
+      },
     ];
+    await writeManifest(manifestPath, manifest);
+    const saved = await readManifest(manifestPath);
 
-    const batches = splitFilesIntoBatches(files, 25_000);
-    assert.equal(batches.length, 2);
-    assert.deepEqual(batches.map((batch) => batch.map((file) => file.path)), [["a.ts", "b.ts"], ["c.ts"]]);
+    const ts = saved.skills[0];
+    assert.equal(ts.static_confidence, 0.6);
+    assert.equal(ts.llm_confidence, 0.85);
+    assert.equal(ts.review_priority, 0.9);
+    assert.equal(ts.review_decision, "llm-reviewed");
+    assert.deepEqual(ts.evidence_digest, ["Owned 4 TypeScript files", "Has tests covering API handlers"]);
+
+    const docker = saved.skills[1];
+    assert.equal(docker.static_confidence, 0.45);
+    assert.equal(docker.llm_confidence, undefined);
+    assert.equal(docker.review_decision, "static-only");
+  });
+
+  it("skipped skills keep static confidence and review_decision static-only", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const skill = buildHybridSkill("Redis", [
+      { id: "EV-DEP-redis", type: "dependency" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 1, source: "package.json" },
+    ], undefined);
+    assert.equal(skill.review_decision, "static-only");
+    assert.equal(skill.inferred_by, "static");
+    assert.equal(skill.confidence, skill.static_confidence);
+    assert.equal(skill.llm_confidence, undefined);
+    assert.ok(typeof skill.static_confidence === "number");
+  });
+
+  it("reviewed skills record both static and llm confidence", async () => {
+    const { mergeHybridConfidence } = await import("./infer.ts");
+    const result = mergeHybridConfidence(0.5, 0.8);
+    const expected = Math.round((0.5 * 0.35 + 0.8 * 0.65) * 100) / 100;
+    assert.equal(result, expected);
+  });
+
+  it("cache hit records review_decision cached-llm", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const review = { skill: "TypeScript", quality_score: 0.85, reasoning: "Good", strengths: ["types"] };
+    const skill = buildHybridSkill("TypeScript", [
+      { id: "EV-FILE-1", type: "file" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 0.9, source: "src/app.ts" },
+    ], review, true);
+    assert.equal(skill.review_decision, "cached-llm");
+    assert.equal(skill.inferred_by, "llm");
+    assert.ok(typeof skill.static_confidence === "number");
+    assert.equal(skill.llm_confidence, 0.85);
+  });
+
+  it("buildHybridSkill persists evidence_digest for reviewed skills", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const digest = {
+      summaryLines: ["Owned 4 TypeScript files", "Has tests covering API handlers"],
+      snippetBlocks: [{ path: "src/app.ts", note: "ownership: 95%", content: "const x = 1;" }],
+    };
+    const review = { skill: "TypeScript", quality_score: 0.85, reasoning: "Good", strengths: ["types"] };
+    const skill = buildHybridSkill("TypeScript", [
+      { id: "EV-FILE-1", type: "file" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 0.9, source: "src/app.ts" },
+    ], review, false, digest);
+    assert.deepEqual(skill.evidence_digest, ["Owned 4 TypeScript files", "Has tests covering API handlers"]);
+    assert.equal(skill.review_decision, "llm-reviewed");
+  });
+
+  it("buildHybridSkill preserves evidence_digest for cached-llm skills", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const digest = {
+      summaryLines: ["3 React components"],
+      snippetBlocks: [],
+    };
+    const review = { skill: "React", quality_score: 0.75, reasoning: "Nice", strengths: ["hooks"] };
+    const skill = buildHybridSkill("React", [
+      { id: "EV-FILE-1", type: "file" as const, hash: "b", timestamp: "2026-01-01T00:00:00Z", ownership: 0.8, source: "src/App.tsx" },
+    ], review, true, digest);
+    assert.deepEqual(skill.evidence_digest, ["3 React components"]);
+    assert.equal(skill.review_decision, "cached-llm");
+  });
+
+  it("buildHybridSkill omits evidence_digest for static-only skills", async () => {
+    const { buildHybridSkill } = await import("./infer.ts");
+    const skill = buildHybridSkill("Redis", [
+      { id: "EV-DEP-redis", type: "dependency" as const, hash: "a", timestamp: "2026-01-01T00:00:00Z", ownership: 1, source: "package.json" },
+    ]);
+    assert.equal(skill.evidence_digest, undefined);
+    assert.equal(skill.review_decision, "static-only");
   });
 
   it("mergeReviewResults averages scores and deduplicates strengths", async () => {

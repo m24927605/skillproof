@@ -97,6 +97,60 @@ describe("render", () => {
     assert.ok(!md.includes("Internal reasoning note"));
   });
 
+  it("renders static-only skill conservatively", () => {
+    const manifest: Manifest = {
+      schema_version: "1.0",
+      generated_at: "2025-01-01T00:00:00Z",
+      repo: { url: null, head_commit: "abc" },
+      author: { name: "Jane", email: "jane@ex.com" },
+      evidence: [],
+      skills: [
+        {
+          name: "Redis",
+          confidence: 0.4,
+          evidence_ids: ["EV-1"],
+          inferred_by: "static",
+          static_confidence: 0.4,
+          review_decision: "static-only",
+        },
+      ],
+      claims: [],
+      signatures: [],
+    };
+    const md = renderResume(manifest);
+    assert.ok(md.includes("static-only") || md.includes("Static"), "should indicate static scoring");
+    assert.ok(!md.includes("Strengths"), "static-only should not show strengths section");
+  });
+
+  it("renders llm-reviewed skill with strengths", () => {
+    const manifest: Manifest = {
+      schema_version: "1.0",
+      generated_at: "2025-01-01T00:00:00Z",
+      repo: { url: null, head_commit: "abc" },
+      author: { name: "Jane", email: "jane@ex.com" },
+      evidence: [],
+      skills: [
+        {
+          name: "TypeScript",
+          confidence: 0.72,
+          evidence_ids: ["EV-1"],
+          inferred_by: "llm",
+          static_confidence: 0.5,
+          llm_confidence: 0.85,
+          review_decision: "llm-reviewed",
+          strengths: ["Strong types", "Good patterns"],
+          reasoning: "Solid usage",
+        },
+      ],
+      claims: [],
+      signatures: [],
+    };
+    const md = renderResume(manifest);
+    assert.ok(md.includes("Strong types"));
+    assert.ok(md.includes("Good patterns"));
+    assert.ok(md.includes("reviewed") || md.includes("Reviewed"), "should indicate LLM reviewed");
+  });
+
   it("includes evidence count summary", () => {
     const manifest: Manifest = {
       schema_version: "1.0",

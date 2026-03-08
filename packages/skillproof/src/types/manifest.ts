@@ -12,6 +12,8 @@ export interface Evidence {
 
 export type SkillInferenceMethod = "static" | "llm";
 
+export type ReviewDecision = "static-only" | "llm-reviewed" | "cached-llm";
+
 export interface Skill {
   name: string;
   confidence: number;
@@ -19,6 +21,11 @@ export interface Skill {
   inferred_by: SkillInferenceMethod;
   strengths?: string[];
   reasoning?: string;
+  static_confidence?: number;
+  llm_confidence?: number;
+  review_priority?: number;
+  review_decision?: ReviewDecision;
+  evidence_digest?: string[];
 }
 
 export type ClaimCategory = "language" | "framework" | "infrastructure" | "tool" | "practice";
