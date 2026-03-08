@@ -52,4 +52,29 @@ describe("infer", () => {
     assert.ok(skillEvidence.has("Docker"));
     assert.ok(skillEvidence.has("Redis"));
   });
+
+  it("Skill type accepts strengths, improvements, reasoning fields", async () => {
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+    manifest.skills = [
+      {
+        name: "TypeScript",
+        confidence: 0.85,
+        evidence_ids: ["EV-1"],
+        inferred_by: "llm",
+        strengths: ["Good type safety"],
+        improvements: ["Missing error handling"],
+        reasoning: "Solid TypeScript usage",
+      },
+    ];
+    await writeManifest(manifestPath, manifest);
+    const saved = await readManifest(manifestPath);
+    assert.deepEqual(saved.skills[0].strengths, ["Good type safety"]);
+    assert.deepEqual(saved.skills[0].improvements, ["Missing error handling"]);
+    assert.equal(saved.skills[0].reasoning, "Solid TypeScript usage");
+  });
 });

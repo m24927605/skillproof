@@ -17,6 +17,9 @@ export interface Skill {
   confidence: number;
   evidence_ids: string[];
   inferred_by: SkillInferenceMethod;
+  strengths?: string[];
+  improvements?: string[];
+  reasoning?: string;
 }
 
 export type ClaimCategory = "language" | "framework" | "infrastructure" | "tool" | "practice";
