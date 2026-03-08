@@ -19,8 +19,6 @@ import { decideSkillReview } from "../core/review-gate.ts";
 import { buildEvidenceDigest } from "../core/evidence-digest.ts";
 import type { EvidenceDigest } from "../core/evidence-digest.ts";
 
-const TOKEN_BUDGET_PER_SKILL = 50_000;
-
 interface GroupPlan {
   group: SkillGroup;
   filesToReview: FileForReview[];
@@ -425,11 +423,10 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
           }
         }
 
-        // Sort by ownership descending and read files up to token budget
+        // Read all relevant files — the digest builder handles its own truncation
+        // (MAX_SNIPPETS=5, MAX_SNIPPET_CHARS=2000 per snippet)
         const sortedEvidence = [...allFileEvidence.values()].sort((a, b) => b.ownership - a.ownership);
         const filesToReview: FileForReview[] = [];
-        let tokenCount = 0;
-        const budgetPerGroup = TOKEN_BUDGET_PER_SKILL * groupSkillNames.length;
 
         for (const ev of sortedEvidence) {
           const filePath = path.join(cwd, ev.source);
@@ -440,13 +437,8 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
             continue;
           }
           const truncated = truncateFileContent(content);
-          const tokens = estimateTokens(truncated);
-          if (tokenCount + tokens > budgetPerGroup && filesToReview.length > 0) {
-            break;
-          }
           filesToReview.push({ path: ev.source, content: truncated, ownership: ev.ownership, skill: groupSkillNames.join("+") });
           fileContentsCache.set(ev.source, truncated);
-          tokenCount += tokens;
         }
 
         // Build per-skill digests, compute digest hashes and per-skill token estimates
@@ -472,10 +464,13 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
         const groupCacheKey = computeCacheKey(groupCacheKeyName, sortedDigestHashes, PROMPT_VERSION, LLM_MODEL);
         const cachedGroup = await getCachedGroupReview(cwd, groupCacheKey);
 
+        // Group token count = sum of per-skill digest tokens (what actually gets sent)
+        const groupDigestTokens = [...skillDigestTokens.values()].reduce((a, b) => a + b, 0);
+
         groupPlans.push({
           group,
           filesToReview,
-          tokenCount,
+          tokenCount: groupDigestTokens,
           groupCacheKey,
           skillDigests,
           skillDigestHashes,
