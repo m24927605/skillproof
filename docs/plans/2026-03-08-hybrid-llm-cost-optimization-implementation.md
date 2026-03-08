@@ -79,7 +79,7 @@ cd packages/skillproof && node --experimental-strip-types --test src/commands/in
 
 **Design requirements:**
 
-Implement a deterministic feature extractor that analyzes the selected evidence files for a skill and returns:
+Implement a deterministic feature extractor that analyzes **all evidence types** for a skill (file, dependency, config, commit, snippet, pull_request) and returns:
 
 ```typescript
 export interface StaticQualityResult {
@@ -90,6 +90,11 @@ export interface StaticQualityResult {
     owned_file_count: number;
     test_file_count: number;
     config_file_count: number;
+    dependency_count: number;
+    config_evidence_count: number;
+    commit_count: number;
+    pr_count: number;
+    snippet_count: number;
     has_ci: boolean;
     has_lint: boolean;
     has_types: boolean;
@@ -98,6 +103,18 @@ export interface StaticQualityResult {
   };
 }
 ```
+
+**Evidence type handling:**
+
+The analyzer must accept all evidence types as first-class inputs, not just files:
+
+- **file** evidence: analyze file paths and contents for quality signals (tests, types, error handling, etc.)
+- **dependency** evidence: recognize the skill is dependency-derived; apply a conservative ceiling unless file evidence also exists
+- **config** evidence: similar to dependency — presence of config signals familiarity but not necessarily deep usage
+- **commit** / **pull_request** evidence: use commit/PR count and recency as supplementary signals
+- **snippet** evidence: treat as lightweight file evidence; scan content for quality patterns
+
+Skills with only dependency/config evidence must still receive a valid `static_confidence` through a well-defined path, not an ad hoc fallback.
 
 **Scoring guidance:**
 
@@ -117,12 +134,14 @@ Cover at least:
 
 - more score when tests are present
 - more score when lint/type/CI signals are present
-- conservative score when only dependency/config evidence exists
+- conservative score when only dependency/config evidence exists (first-class path, not fallback)
+- dependency-only skill receives valid static_confidence without file content
+- commit/PR evidence supplements score but does not override file-based signals
 - score always clamped to `0..1`
 
 **Step 2: Implement `analyzeStaticQuality()`**
 
-Use string/pattern checks over file paths and truncated contents. Keep it deterministic and cheap.
+Accept all evidence types. Use string/pattern checks over file paths and truncated contents for file evidence; use evidence type and metadata for dependency/config/commit/PR evidence. Keep it deterministic and cheap.
 
 **Step 3: Verify**
 

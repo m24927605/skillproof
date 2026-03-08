@@ -28,7 +28,7 @@ Merge formula (v1): `confidence = static_confidence * 0.35 + llm_confidence * 0.
 
 These two fields have distinct, non-overlapping responsibilities:
 
-- **`inferred_by`**: The **final scoring source**. Only two values: `"static"` or `"llm"`. Determines which confidence value became the outward-facing `confidence`. Set to `"llm"` when LLM review was performed (whether fresh or cached); set to `"static"` when the skill was scored purely by deterministic analysis.
+- **`inferred_by`**: Indicates **whether LLM participated in final scoring**. Only two values: `"static"` or `"llm"`. Set to `"llm"` when LLM review was performed (whether fresh or cached), meaning the final `confidence` is a weighted blend of both `static_confidence` and `llm_confidence`. Set to `"static"` when the skill was scored purely by deterministic analysis, meaning `confidence` equals `static_confidence`. Note: `inferred_by: "llm"` does **not** mean confidence came solely from the LLM — it means the LLM contributed to the blended score.
 
 - **`review_decision`**: The **review lifecycle outcome**. Three values:
   - `"static-only"` — skill was not sent to LLM review
@@ -46,16 +46,41 @@ The existing skill grouping and batching pipeline is retained for efficiency. Ch
 - **Batching** operates on **digest payload size**, not raw file dumps. The 25K input token limit applies to the digest-based prompt.
 - Individual skills still receive distinct `static_confidence`, `review_priority`, and `evidence_digest` values regardless of grouping.
 
-### 4. Cache Key for Grouped Digest Prompts
+### 4. Cache Strategy: Two-Level Caching
 
-Cache keys must include all inputs that affect the review result:
+Caching operates at two levels: **per-skill** and **group-level**.
 
-- File content hashes (existing)
+#### Per-Skill Cache (primary)
+
+Each skill's LLM review result is cached independently, keyed by:
+
+- Skill name
+- File content hashes for that skill's evidence
+- **Per-skill digest payload hash** — the exact digest section sent to the LLM for this skill
 - **Digest version identifier** — a constant bumped whenever digest construction rules change
 - **Prompt version identifier** — a constant bumped whenever the review prompt template changes
 - Model identifier (existing)
 
-This prevents stale cache hits when digest rules or prompt templates are updated without file content changing.
+This is the primary cache layer. When a neighboring skill in a group changes but this skill's digest is unchanged, the per-skill cache still hits. This avoids invalidating an entire group when one member changes.
+
+#### Group-Level Cache (optimization)
+
+A group-level cache entry may be stored for the full grouped prompt, keyed by:
+
+- Sorted set of skill names in the group
+- All per-skill digest payload hashes
+- **Shared context hash** — hash of the repo-level shared context block (CI presence, language distribution, etc.)
+- Digest version, prompt version, model identifier
+
+A group-level hit populates all per-skill results at once. If the group-level cache misses (e.g., one skill changed), the system falls back to checking per-skill caches for unchanged members and only sends uncached skills to the LLM.
+
+#### Invalidation Guarantees
+
+- Changing digest construction rules → digest version bumps → all caches invalidate
+- Changing prompt template → prompt version bumps → all caches invalidate
+- Changing a file in one skill → that skill's digest hash changes → per-skill cache misses; other skills in the same group remain cached
+- Changing group composition → group-level cache misses; per-skill caches for unchanged members still hit
+- Changing shared context → shared context hash changes → group-level cache misses; per-skill caches still hit (shared context affects group scoring but per-skill cache captures the actual result)
 
 ### 5. Architecture Flow
 
