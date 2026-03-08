@@ -197,4 +197,44 @@ describe("verify", () => {
     assert.equal(result.resumeTampered, true);
     assert.ok(result.tamperedFiles.includes("resume.md"));
   });
+
+  it("fails when manifest has no file_hashes but resume files exist", async () => {
+    // Simulates split-step CLI flow where sign was run before render
+    const manifest = createEmptyManifest({
+      repoUrl: null,
+      headCommit: "abc",
+      authorName: "Test",
+      authorEmail: "test@example.com",
+    });
+    // No file_hashes set — signing without resume files present
+
+    const keysDir = path.join(tempDir, ".veriresume", "keys");
+    const keys = await generateKeyPair(keysDir);
+
+    const manifestForSign = { ...manifest, signatures: [] as Signature[] };
+    const content = canonicalJson(manifestForSign);
+    const sig = signManifest(content, keys.privateKey);
+    manifest.signatures = [{
+      signer: "candidate",
+      public_key: Buffer.from(keys.publicKey).toString("base64"),
+      signature: sig,
+      timestamp: new Date().toISOString(),
+      algorithm: "Ed25519",
+    }];
+
+    const manifestPath = path.join(tempDir, ".veriresume", "resume-manifest.json");
+    await writeManifest(manifestPath, manifest);
+
+    // Create resume file AFTER signing (not covered by signature)
+    await writeFile(path.join(tempDir, "resume.md"), "# Resume\n", "utf8");
+
+    await runPack(tempDir);
+
+    const bundlePath = path.join(tempDir, "bundle.zip");
+    const result = await verifyBundle(bundlePath);
+    assert.equal(result.valid, false, "should be invalid when file_hashes missing");
+    assert.equal(result.resumeTampered, true);
+    assert.equal(result.fileHashesMissing, true);
+    assert.ok(result.tamperedFiles.includes("resume.md"));
+  });
 });

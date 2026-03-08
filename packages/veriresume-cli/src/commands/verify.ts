@@ -12,6 +12,7 @@ const execFileAsync = promisify(execFile);
 export interface VerifyResult {
   valid: boolean;
   resumeTampered: boolean;
+  fileHashesMissing: boolean;
   tamperedFiles: string[];
   signatures: { signer: string; valid: boolean; error?: string }[];
   manifestHash: string;
@@ -86,6 +87,22 @@ export async function verifyBundle(bundlePath: string): Promise<VerifyResult> {
     const tamperedFiles: string[] = [];
     const fileHashes: Record<string, string> = manifest.file_hashes || {};
 
+    // If manifest has no file_hashes, check if resume files exist in bundle —
+    // if they do, the manifest was signed without file_hashes (integrity gap)
+    let fileHashesMissing = false;
+    if (Object.keys(fileHashes).length === 0) {
+      const RESUME_NAMES = ["resume.md", "resume.pdf", "resume.png", "resume.jpg", "resume.jpeg"];
+      for (const name of RESUME_NAMES) {
+        try {
+          await readFile(path.join(extractDir, name));
+          // Resume file exists but no signed hash — cannot verify integrity
+          tamperedFiles.push(name);
+          resumeTampered = true;
+          fileHashesMissing = true;
+        } catch { /* not present, fine */ }
+      }
+    }
+
     for (const [filename, expectedHash] of Object.entries(fileHashes)) {
       const safeName = path.basename(filename);
       try {
@@ -104,6 +121,7 @@ export async function verifyBundle(bundlePath: string): Promise<VerifyResult> {
     return {
       valid: allSigsValid && !resumeTampered,
       resumeTampered,
+      fileHashesMissing,
       tamperedFiles,
       signatures: sigResults,
       manifestHash,
@@ -128,7 +146,10 @@ export async function runVerify(bundlePath: string): Promise<void> {
   }
 
   if (result.resumeTampered) {
-    if (result.tamperedFiles.length > 0) {
+    if (result.fileHashesMissing) {
+      console.log(`\nWARNING: Manifest missing file_hashes — resume file integrity cannot be verified.`);
+      console.log(`  Re-sign after rendering: veriresume sign`);
+    } else if (result.tamperedFiles.length > 0) {
       console.log(`\nWARNING: Tampered files detected: ${result.tamperedFiles.join(", ")}`);
     } else {
       console.log(`\nWARNING: Resume files have been tampered with!`);

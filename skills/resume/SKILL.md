@@ -265,26 +265,16 @@ Sign the manifest with Ed25519.
 
 3. **Sign the manifest:**
    ```bash
-   node -e "
-   const crypto=require('crypto'),fs=require('fs');
-   const m=JSON.parse(fs.readFileSync('.veriresume/resume-manifest.json','utf8'));
-   m.signatures=[];
-   function sortKeys(o){if(o===null||typeof o!=='object')return o;if(Array.isArray(o))return o.map(sortKeys);const r={};for(const k of Object.keys(o).sort())r[k]=sortKeys(o[k]);return r}
-   const canonical=JSON.stringify(sortKeys(m));
-   const privKey=crypto.createPrivateKey(fs.readFileSync('.veriresume/keys/candidate.key','utf8'));
-   const pubKey=fs.readFileSync('.veriresume/keys/candidate.pub','utf8');
-   const sig=crypto.sign(null,Buffer.from(canonical),privKey).toString('base64');
-   m.signatures=[{
-     signer:'candidate',
-     public_key:Buffer.from(pubKey).toString('base64'),
-     signature:sig,
-     timestamp:new Date().toISOString(),
-     algorithm:'Ed25519'
-   }];
-   fs.writeFileSync('.veriresume/resume-manifest.json',JSON.stringify(m,null,2));
-   console.log('Manifest signed successfully.');
-   "
+   npx veriresume sign
    ```
+   The CLI handles:
+   - Computing `file_hashes` for any resume files present (resume.md, .pdf, .png, etc.)
+   - Writing `file_hashes` into the manifest before signing
+   - Generating or loading Ed25519 keys
+   - Signing the canonical manifest (including `file_hashes`) with Ed25519
+   - Enforcing 0o600 permissions on private key
+
+   > **Important:** Run sign AFTER rendering resume files so `file_hashes` covers all output formats.
 
 4. **Confirm** to user that the manifest has been signed.
 
@@ -292,86 +282,36 @@ Sign the manifest with Ed25519.
 
 Create a distributable bundle.
 
-1. **Compute resume hash and create verification.json:**
-   ```bash
-   node -e "
-   const crypto=require('crypto'),fs=require('fs');
-   const manifest=fs.readFileSync('.veriresume/resume-manifest.json','utf8');
-   const m=JSON.parse(manifest);
-   const mHash=crypto.createHash('sha256').update(manifest).digest('hex');
-   const files=['resume.md','resume.pdf','resume.png','resume.jpg','resume.jpeg'];
-   const found=files.filter(f=>{try{fs.accessSync(f);return true}catch{return false}});
-   if(!found.length){console.error('No resume file found. Run resume-render first.');process.exit(1)}
-   const fileHashes={};
-   found.forEach(f=>fileHashes[f]=crypto.createHash('sha256').update(fs.readFileSync(f,'utf8')).digest('hex'));
-   const v={instructions:'To verify: veriresume verify bundle.zip',manifest_hash:mHash,resume_hash:fileHashes['resume.md']||null,file_hashes:fileHashes,signature_count:m.signatures?.length||0,generated_at:m.generated_at};
-   fs.writeFileSync('.veriresume/verification.json',JSON.stringify(v,null,2));
-   console.log('verification.json created. Resume files: '+found.join(', '));
-   "
-   ```
+> **Important:** Run `veriresume sign` AFTER rendering resume files. The sign step automatically computes `file_hashes` for all resume files and includes them in the signed manifest. This ensures verification covers file integrity.
 
-2. **Create bundle.zip:**
+1. **Create verification.json (informational) and bundle:**
    ```bash
-   rm -f bundle.zip
-   zip -j bundle.zip .veriresume/resume-manifest.json .veriresume/verification.json resume.md
+   npx veriresume pack
    ```
-   Also include any rendered formats that exist:
-   ```bash
-   for f in resume.pdf resume.png resume.jpg resume.jpeg; do [ -f "$f" ] && zip -j bundle.zip "$f"; done
-   ```
+   The CLI handles:
+   - Reading the signed manifest (which already contains `file_hashes`)
+   - Creating `verification.json` for human reference
+   - Bundling all resume files, manifest, and verification into `bundle.zip`
 
-3. **Confirm** the bundle was created and report its size.
+2. **Confirm** the bundle was created and report its size.
 
 ### resume-verify
 
 Verify a bundle's authenticity.
 
-1. **Extract bundle:**
-   ```bash
-   VERIFY_DIR=$(mktemp -d)
-   unzip -o bundle.zip -d "$VERIFY_DIR"
-   ```
+> **Security model:** Verification uses `manifest.file_hashes` (covered by Ed25519 signature), NOT `verification.json`. If `file_hashes` is missing from the signed manifest but resume files exist in the bundle, verification fails.
 
-2. **Verify signatures and content integrity:**
+1. **Run verification:**
    ```bash
-   node -e "
-   const crypto=require('crypto'),fs=require('fs'),path=require('path');
-   const dir=process.argv[1];
-   const manifest=JSON.parse(fs.readFileSync(path.join(dir,'resume-manifest.json'),'utf8'));
-   function sortKeys(o){if(o===null||typeof o!=='object')return o;if(Array.isArray(o))return o.map(sortKeys);const r={};for(const k of Object.keys(o).sort())r[k]=sortKeys(o[k]);return r}
-   const forVerify={...manifest,signatures:[]};
-   const canonical=JSON.stringify(sortKeys(forVerify));
-   const mHash=crypto.createHash('sha256').update(canonical).digest('hex');
-   console.log('Manifest hash: '+mHash);
-   let allValid=manifest.signatures.length>0;
-   for(const sig of manifest.signatures){
-     try{
-       const pubPem=Buffer.from(sig.public_key,'base64').toString('utf8');
-       const pubKey=crypto.createPublicKey(pubPem);
-       const valid=crypto.verify(null,Buffer.from(canonical),pubKey,Buffer.from(sig.signature,'base64'));
-       console.log('  '+sig.signer+': '+(valid?'PASS':'FAIL'));
-       if(!valid)allValid=false;
-     }catch(e){console.log('  '+sig.signer+': FAIL ('+e.message+')');allValid=false}
-   }
-   let tampered=false;
-   try{
-     const v=JSON.parse(fs.readFileSync(path.join(dir,'verification.json'),'utf8'));
-     if(v.resume_hash){
-       const actual=crypto.createHash('sha256').update(fs.readFileSync(path.join(dir,'resume.md'),'utf8')).digest('hex');
-       tampered=actual!==v.resume_hash;
-     }
-   }catch{tampered=true}
-   if(tampered)console.log('WARNING: resume.md has been tampered with!');
-   console.log('Overall: '+((allValid&&!tampered)?'VALID':'INVALID'));
-   " "$VERIFY_DIR"
+   npx veriresume verify bundle.zip
    ```
+   The CLI handles:
+   - Zip Slip protection (validates entries before extraction)
+   - Signature verification against canonical manifest
+   - File integrity check using signed `manifest.file_hashes`
+   - Reports tampered files and missing hash coverage
 
-3. **Clean up:**
-   ```bash
-   rm -rf "$VERIFY_DIR"
-   ```
-
-4. **Report** verification results to user.
+2. **Report** verification results to user.
 
 ### resume-all
 

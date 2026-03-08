@@ -1,5 +1,4 @@
 import path from "node:path";
-import { readFile, access } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { runScan } from "./scan.ts";
@@ -12,8 +11,6 @@ import { runVerify } from "./verify.ts";
 import { selectPrompt, ask } from "../core/prompt.ts";
 import { resolveApiKey, readConfig, writeConfig } from "../core/config.ts";
 import { askYesNo } from "../core/prompt.ts";
-import { hashContent } from "../core/hashing.ts";
-import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -34,7 +31,6 @@ export async function runAll(
     "Scanning repository",
     "Inferring skills",
     "Rendering resume",
-    "Computing file hashes",
     "Signing manifest",
     "Packing bundle",
     "Verifying bundle",
@@ -159,31 +155,15 @@ export async function runAll(
     };
     await runRender(cwd, locale, format, output, renderOpts);
 
-    // Step 4: Compute file hashes and write to manifest (before signing)
-    step("Computing file hashes");
-    const RESUME_FORMATS = ["resume.md", "resume.pdf", "resume.png", "resume.jpg", "resume.jpeg"];
-    const manifestPath = getManifestPath(cwd);
-    const manifest = await readManifest(manifestPath);
-    const fileHashes: Record<string, string> = {};
-    for (const filename of RESUME_FORMATS) {
-      try {
-        await access(path.join(cwd, filename));
-        const content = await readFile(path.join(cwd, filename));
-        fileHashes[filename] = hashContent(content);
-      } catch { /* doesn't exist */ }
-    }
-    manifest.file_hashes = fileHashes;
-    await writeManifest(manifestPath, manifest);
-
-    // Step 5: Sign (after render so file_hashes are covered by signature)
+    // Step 4: Sign (computes file_hashes for resume files automatically)
     step("Signing manifest");
     await runSign(cwd);
 
-    // Step 6: Pack
+    // Step 5: Pack
     step("Packing bundle");
     await runPack(cwd);
 
-    // Step 7: Verify
+    // Step 6: Verify
     const bundlePath = path.join(cwd, "bundle.zip");
     step("Verifying bundle");
     await runVerify(bundlePath);

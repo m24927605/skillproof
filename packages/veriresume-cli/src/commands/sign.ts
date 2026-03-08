@@ -1,9 +1,11 @@
 import crypto from "node:crypto";
-import { readFile, writeFile, mkdir, stat, chmod } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat, chmod, access } from "node:fs/promises";
 import path from "node:path";
 import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
-import { canonicalJson } from "../core/hashing.ts";
+import { canonicalJson, hashContent } from "../core/hashing.ts";
 import type { Signature } from "../types/manifest.ts";
+
+const RESUME_FORMATS = ["resume.md", "resume.pdf", "resume.png", "resume.jpg", "resume.jpeg"];
 
 export interface KeyPair {
   publicKey: string;
@@ -73,6 +75,19 @@ async function loadOrGenerateKeys(cwd: string): Promise<KeyPair> {
 export async function runSign(cwd: string): Promise<void> {
   const manifestPath = getManifestPath(cwd);
   const manifest = await readManifest(manifestPath);
+
+  // Compute file_hashes for any resume files present (ensures split-step CLI flow is covered)
+  const fileHashes: Record<string, string> = {};
+  for (const filename of RESUME_FORMATS) {
+    try {
+      await access(path.join(cwd, filename));
+      const content = await readFile(path.join(cwd, filename));
+      fileHashes[filename] = hashContent(content);
+    } catch { /* doesn't exist */ }
+  }
+  if (Object.keys(fileHashes).length > 0) {
+    manifest.file_hashes = fileHashes;
+  }
 
   manifest.signatures = [];
   const content = canonicalJson(manifest);
