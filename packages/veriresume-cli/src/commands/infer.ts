@@ -147,7 +147,6 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean }): Pr
           evidence_ids: evs.map((e) => e.id),
           inferred_by: "llm" as const,
           strengths: review.strengths,
-          improvements: review.improvements,
           reasoning: review.reasoning,
         });
       } catch (err: unknown) {

@@ -6,7 +6,6 @@ export interface ReviewResult {
   quality_score: number;
   reasoning: string;
   strengths: string[];
-  improvements: string[];
 }
 
 export function buildReviewPrompt(
@@ -27,8 +26,7 @@ Respond with ONLY a JSON object (no markdown, no explanation outside JSON):
   "skill": "<skill name>",
   "quality_score": <0.0 to 1.0>,
   "reasoning": "<brief explanation>",
-  "strengths": ["<strength 1>", "<strength 2>"],
-  "improvements": ["<improvement 1>", "<improvement 2>"]
+  "strengths": ["<strength 1>", "<strength 2>"]
 }
 
 Score guide:
@@ -63,7 +61,6 @@ export function parseReviewResponse(response: string): ReviewResult {
       quality_score: Math.max(0, Math.min(1, Number(parsed.quality_score) || 0)),
       reasoning: parsed.reasoning || "",
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
-      improvements: Array.isArray(parsed.improvements) ? parsed.improvements : [],
     };
   } catch {
     throw new Error(`Failed to parse code review response: ${response.slice(0, 200)}`);

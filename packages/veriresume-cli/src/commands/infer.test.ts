@@ -71,7 +71,7 @@ describe("infer", () => {
     assert.equal(files[2].source, "low.ts");
   });
 
-  it("Skill type accepts strengths, improvements, reasoning fields", async () => {
+  it("Skill type accepts strengths and reasoning fields", async () => {
     const manifest = createEmptyManifest({
       repoUrl: null,
       headCommit: "abc",
@@ -85,14 +85,12 @@ describe("infer", () => {
         evidence_ids: ["EV-1"],
         inferred_by: "llm",
         strengths: ["Good type safety"],
-        improvements: ["Missing error handling"],
         reasoning: "Solid TypeScript usage",
       },
     ];
     await writeManifest(manifestPath, manifest);
     const saved = await readManifest(manifestPath);
     assert.deepEqual(saved.skills[0].strengths, ["Good type safety"]);
-    assert.deepEqual(saved.skills[0].improvements, ["Missing error handling"]);
     assert.equal(saved.skills[0].reasoning, "Solid TypeScript usage");
   });
 });

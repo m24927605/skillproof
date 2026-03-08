@@ -18,7 +18,6 @@ export interface Skill {
   evidence_ids: string[];
   inferred_by: SkillInferenceMethod;
   strengths?: string[];
-  improvements?: string[];
   reasoning?: string;
 }
 

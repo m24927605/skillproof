@@ -73,7 +73,7 @@ describe("render", () => {
     assert.ok(md.includes("Good error handling"));
   });
 
-  it("does not display improvements in resume", () => {
+  it("does not display reasoning in resume body", () => {
     const manifest: Manifest = {
       schema_version: "1.0",
       generated_at: "2025-01-01T00:00:00Z",
@@ -87,15 +87,14 @@ describe("render", () => {
           evidence_ids: [],
           inferred_by: "llm",
           strengths: [],
-          improvements: ["Needs more tests"],
-          reasoning: "OK",
+          reasoning: "Internal reasoning note",
         },
       ],
       claims: [],
       signatures: [],
     };
     const md = renderResume(manifest);
-    assert.ok(!md.includes("Needs more tests"));
+    assert.ok(!md.includes("Internal reasoning note"));
   });
 
   it("includes evidence count summary", () => {

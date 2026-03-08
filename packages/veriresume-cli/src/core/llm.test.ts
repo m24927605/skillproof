@@ -76,7 +76,7 @@ describe("llm", () => {
       assert.ok(userMessage.includes("Demonstrates solid TypeScript proficiency"));
     });
 
-    it("does not include improvements in user message", () => {
+    it("includes strengths but not reasoning in user message", () => {
       const manifestWithReview: Manifest = {
         ...manifest,
         skills: [
@@ -86,13 +86,12 @@ describe("llm", () => {
             evidence_ids: ["EV-2"],
             inferred_by: "llm",
             strengths: ["Good code"],
-            improvements: ["Needs more tests"],
-            reasoning: "OK",
+            reasoning: "Internal note",
           },
         ],
       };
       const { userMessage } = buildPromptMessages(manifestWithReview, "en-US", null);
-      assert.ok(!userMessage.includes("Needs more tests"));
+      assert.ok(userMessage.includes("Good code"));
     });
 
     it("uses displayName and contactEmail when provided", () => {

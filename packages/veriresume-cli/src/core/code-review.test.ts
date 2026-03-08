@@ -25,7 +25,6 @@ describe("code-review", () => {
         quality_score: 0.85,
         reasoning: "Good code",
         strengths: ["type safety"],
-        improvements: ["add tests"],
       });
       const result = parseReviewResponse(json);
       assert.equal(result.quality_score, 0.85);
@@ -34,7 +33,7 @@ describe("code-review", () => {
     });
 
     it("extracts JSON from markdown code block", () => {
-      const response = "Here is my review:\n```json\n{\"skill\":\"Go\",\"quality_score\":0.7,\"reasoning\":\"OK\",\"strengths\":[],\"improvements\":[]}\n```";
+      const response = "Here is my review:\n```json\n{\"skill\":\"Go\",\"quality_score\":0.7,\"reasoning\":\"OK\",\"strengths\":[]}\n```";
       const result = parseReviewResponse(response);
       assert.equal(result.quality_score, 0.7);
     });
@@ -45,7 +44,6 @@ describe("code-review", () => {
         quality_score: 1.5,
         reasoning: "Great",
         strengths: [],
-        improvements: [],
       });
       const result = parseReviewResponse(json);
       assert.equal(result.quality_score, 1.0);
