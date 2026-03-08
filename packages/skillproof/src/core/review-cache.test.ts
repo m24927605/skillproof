@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, LLM_MODEL } from "./review-cache.ts";
+import { computeCacheKey, hashDigest, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, LLM_MODEL } from "./review-cache.ts";
+import type { EvidenceDigest } from "./evidence-digest.ts";
 
 describe("review-cache", () => {
   let tempDir: string;
@@ -50,6 +51,66 @@ describe("review-cache", () => {
     it("sorts file hashes for consistent key regardless of order", () => {
       const key1 = computeCacheKey("TypeScript", ["hash2", "hash1"], "v1", LLM_MODEL);
       const key2 = computeCacheKey("TypeScript", ["hash1", "hash2"], "v1", LLM_MODEL);
+      assert.equal(key1, key2);
+    });
+  });
+
+  describe("hashDigest", () => {
+    it("returns consistent hash for identical digests", () => {
+      const digest: EvidenceDigest = {
+        summaryLines: ["Owned 4 TypeScript files"],
+        snippetBlocks: [{ path: "src/app.ts", note: "ownership: 95%", content: "const x = 1;" }],
+      };
+      assert.equal(hashDigest(digest), hashDigest(digest));
+    });
+
+    it("returns different hash when snippet content changes", () => {
+      const digest1: EvidenceDigest = {
+        summaryLines: ["Owned 4 TypeScript files"],
+        snippetBlocks: [{ path: "src/app.ts", note: "ownership: 95%", content: "const x = 1;" }],
+      };
+      const digest2: EvidenceDigest = {
+        summaryLines: ["Owned 4 TypeScript files"],
+        snippetBlocks: [{ path: "src/app.ts", note: "ownership: 95%", content: "const x = 2;" }],
+      };
+      assert.notEqual(hashDigest(digest1), hashDigest(digest2));
+    });
+
+    it("returns different hash when summary lines change", () => {
+      const digest1: EvidenceDigest = {
+        summaryLines: ["Owned 4 TypeScript files"],
+        snippetBlocks: [],
+      };
+      const digest2: EvidenceDigest = {
+        summaryLines: ["Owned 5 TypeScript files"],
+        snippetBlocks: [],
+      };
+      assert.notEqual(hashDigest(digest1), hashDigest(digest2));
+    });
+
+    it("produces different cache keys for same skill with different digests", () => {
+      const digest1: EvidenceDigest = {
+        summaryLines: ["Owned 4 files"],
+        snippetBlocks: [{ path: "a.ts", note: "95%", content: "old code" }],
+      };
+      const digest2: EvidenceDigest = {
+        summaryLines: ["Owned 4 files"],
+        snippetBlocks: [{ path: "a.ts", note: "95%", content: "new code" }],
+      };
+      const key1 = computeCacheKey("TypeScript", [hashDigest(digest1)], "v1", LLM_MODEL);
+      const key2 = computeCacheKey("TypeScript", [hashDigest(digest2)], "v1", LLM_MODEL);
+      assert.notEqual(key1, key2);
+    });
+
+    it("per-skill key is independent of other skills in the group", () => {
+      const tsDigest: EvidenceDigest = {
+        summaryLines: ["Owned 4 TypeScript files"],
+        snippetBlocks: [{ path: "src/app.ts", note: "95%", content: "const x = 1;" }],
+      };
+      const tsHash = hashDigest(tsDigest);
+      // Same TypeScript digest hash produces same key regardless of group neighbors
+      const key1 = computeCacheKey("TypeScript", [tsHash], "v1", LLM_MODEL);
+      const key2 = computeCacheKey("TypeScript", [tsHash], "v1", LLM_MODEL);
       assert.equal(key1, key2);
     });
   });

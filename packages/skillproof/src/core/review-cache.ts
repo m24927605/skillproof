@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { ReviewResult } from "./code-review.ts";
+import type { EvidenceDigest } from "./evidence-digest.ts";
 
 const CACHE_DIR = ".skillproof/cache/reviews";
 export const PROMPT_VERSION = "v1";
@@ -9,13 +10,25 @@ export const LLM_MODEL = "claude-sonnet-4-6";
 
 export function computeCacheKey(
   skill: string,
-  fileHashes: string[],
+  contentHashes: string[],
   promptVersion: string,
   model: string,
 ): string {
-  const sorted = [...fileHashes].sort();
+  const sorted = [...contentHashes].sort();
   const input = JSON.stringify({ skill, fileHashes: sorted, promptVersion, model });
   return createHash("sha256").update(input).digest("hex");
+}
+
+export function hashDigest(digest: EvidenceDigest): string {
+  const canonical = JSON.stringify({
+    summaryLines: digest.summaryLines,
+    snippetBlocks: digest.snippetBlocks.map((b) => ({
+      path: b.path,
+      note: b.note,
+      content: b.content,
+    })),
+  });
+  return createHash("sha256").update(canonical).digest("hex");
 }
 
 export async function getCachedReview(

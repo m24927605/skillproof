@@ -6,7 +6,7 @@ import { resolveApiKey } from "../core/config.ts";
 import { ask, askYesNo } from "../core/prompt.ts";
 import { readConfig, writeConfig } from "../core/config.ts";
 import { reviewSkillGroupFromDigests } from "../core/code-review.ts";
-import { computeCacheKey, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, PROMPT_VERSION, LLM_MODEL } from "../core/review-cache.ts";
+import { computeCacheKey, hashDigest, getCachedReview, saveCachedReview, getCachedGroupReview, saveCachedGroupReview, PROMPT_VERSION, LLM_MODEL } from "../core/review-cache.ts";
 import { truncateFileContent, estimateTokens, estimateCost, buildCostPreviewDisplay } from "../core/token-estimate.ts";
 import type { CostPreview } from "../core/token-estimate.ts";
 import { groupSkillsByFileOverlap } from "../core/skill-grouping.ts";
@@ -25,8 +25,9 @@ interface GroupPlan {
   group: SkillGroup;
   filesToReview: FileForReview[];
   tokenCount: number;
-  fileHashes: string[];
-  cacheKey: string;
+  groupCacheKey: string;
+  skillDigests: Map<string, EvidenceDigest>;
+  skillDigestHashes: Map<string, string>;
   cached: boolean;
 }
 
@@ -137,14 +138,14 @@ async function processGroupPlans(
   groupPlans: GroupPlan[],
   skillEvidence: Map<string, Evidence[]>,
   skills: Skill[],
-  fileContentsCache: Map<string, string>,
+  _fileContentsCache: Map<string, string>,
   options?: { maxReviewTokens?: number; yes?: boolean },
 ): Promise<void> {
   const maxTokens = options?.maxReviewTokens ?? 200_000;
   let cumulativeTokens = 0;
 
   for (const plan of groupPlans) {
-    const { group, filesToReview, tokenCount, fileHashes, cacheKey } = plan;
+    const { group, filesToReview, tokenCount, groupCacheKey, skillDigests, skillDigestHashes } = plan;
     const groupSkillNames = group.skills;
 
     if (filesToReview.length === 0) {
@@ -155,9 +156,9 @@ async function processGroupPlans(
       continue;
     }
 
-    // Check cache (already computed during pre-compute)
+    // Check group-level cache first (optimization — all skills hit at once)
     if (plan.cached) {
-      const cachedGroup = await getCachedGroupReview(cwd, cacheKey);
+      const cachedGroup = await getCachedGroupReview(cwd, groupCacheKey);
       const cachedMap = new Map(cachedGroup!.map((r) => [r.skill, r]));
       for (const skillName of groupSkillNames) {
         const evs = skillEvidence.get(skillName)!;
@@ -166,7 +167,9 @@ async function processGroupPlans(
           console.log(`  ${skillName}: cached — ${cached.quality_score} — ${cached.reasoning}`);
           skills.push(buildHybridSkill(skillName, evs, cached, true));
         } else {
-          const individualKey = computeCacheKey(skillName, fileHashes, PROMPT_VERSION, LLM_MODEL);
+          // Fallback to per-skill cache (digest-based key)
+          const digestHash = skillDigestHashes.get(skillName)!;
+          const individualKey = computeCacheKey(skillName, [digestHash], PROMPT_VERSION, LLM_MODEL);
           const individualCached = await getCachedReview(cwd, individualKey);
           if (individualCached) {
             console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
@@ -179,18 +182,36 @@ async function processGroupPlans(
       continue;
     }
 
-    const skillLabel = groupSkillNames.length > 1
-      ? `[${groupSkillNames.join(", ")}]`
-      : groupSkillNames[0];
+    // Group cache miss — check per-skill caches before calling LLM
+    const uncachedSkills: string[] = [];
+    for (const skillName of groupSkillNames) {
+      const digestHash = skillDigestHashes.get(skillName)!;
+      const individualKey = computeCacheKey(skillName, [digestHash], PROMPT_VERSION, LLM_MODEL);
+      const individualCached = await getCachedReview(cwd, individualKey);
+      if (individualCached) {
+        const evs = skillEvidence.get(skillName)!;
+        console.log(`  ${skillName}: cached — ${individualCached.quality_score} — ${individualCached.reasoning}`);
+        skills.push(buildHybridSkill(skillName, evs, individualCached, true));
+      } else {
+        uncachedSkills.push(skillName);
+      }
+    }
 
-    // Budget check — only for non-cached groups that will call the LLM
+    // All skills were individually cached — no LLM call needed
+    if (uncachedSkills.length === 0) continue;
+
+    const skillLabel = uncachedSkills.length > 1
+      ? `[${uncachedSkills.join(", ")}]`
+      : uncachedSkills[0];
+
+    // Budget check — only for skills that will call the LLM
     if (cumulativeTokens + tokenCount > maxTokens) {
       if (!options?.yes) {
         console.log(`\n  Budget alert: ${Math.round(cumulativeTokens / 1000)}K / ${Math.round(maxTokens / 1000)}K tokens used.`);
         console.log(`  ${skillLabel} would add ~${Math.round(tokenCount / 1000)}K tokens.`);
         const proceed = await askYesNo("  Continue reviewing?");
         if (!proceed) {
-          for (const skillName of groupSkillNames) {
+          for (const skillName of uncachedSkills) {
             const evs = skillEvidence.get(skillName)!;
             skills.push(buildHybridSkill(skillName, evs));
           }
@@ -198,7 +219,7 @@ async function processGroupPlans(
         }
       } else if (cumulativeTokens + tokenCount > maxTokens) {
         console.log(`  ${skillLabel}: skipped (budget exceeded)`);
-        for (const skillName of groupSkillNames) {
+        for (const skillName of uncachedSkills) {
           const evs = skillEvidence.get(skillName)!;
           skills.push(buildHybridSkill(skillName, evs));
         }
@@ -208,30 +229,32 @@ async function processGroupPlans(
 
     cumulativeTokens += tokenCount;
 
-    // Build per-skill digests for the group
-    const skillDigests = new Map<string, EvidenceDigest>();
-    for (const skillName of groupSkillNames) {
-      const evs = skillEvidence.get(skillName)!;
-      const staticResult = analyzeStaticQuality(skillName, evs);
-      const digest = buildEvidenceDigest(skillName, evs, staticResult, fileContentsCache);
-      skillDigests.set(skillName, digest);
+    // Build digest map for uncached skills only
+    const uncachedDigests = new Map<string, EvidenceDigest>();
+    for (const skillName of uncachedSkills) {
+      uncachedDigests.set(skillName, skillDigests.get(skillName)!);
     }
 
     console.log(`  Reviewing ${skillLabel}: ${filesToReview.length} files, ~${Math.round(tokenCount / 1000)}K tokens`);
 
     try {
-      const reviews = await reviewSkillGroupFromDigests(apiKey, groupSkillNames, skillDigests);
+      const reviews = await reviewSkillGroupFromDigests(apiKey, uncachedSkills, uncachedDigests);
 
-      if (reviews.length > 0) {
-        await saveCachedGroupReview(cwd, cacheKey, reviews);
+      // Save group cache (only if reviewing the full group — partial groups get per-skill only)
+      if (reviews.length > 0 && uncachedSkills.length === groupSkillNames.length) {
+        await saveCachedGroupReview(cwd, groupCacheKey, reviews);
       }
+      // Always save per-skill caches with digest-based keys
       for (const review of reviews) {
-        const individualKey = computeCacheKey(review.skill, fileHashes, PROMPT_VERSION, LLM_MODEL);
-        await saveCachedReview(cwd, individualKey, review);
+        const digestHash = skillDigestHashes.get(review.skill);
+        if (digestHash) {
+          const individualKey = computeCacheKey(review.skill, [digestHash], PROMPT_VERSION, LLM_MODEL);
+          await saveCachedReview(cwd, individualKey, review);
+        }
       }
 
       const reviewMap = new Map(reviews.map((r) => [r.skill, r]));
-      for (const skillName of groupSkillNames) {
+      for (const skillName of uncachedSkills) {
         const evs = skillEvidence.get(skillName)!;
         const review = reviewMap.get(skillName);
         if (review) {
@@ -246,7 +269,7 @@ async function processGroupPlans(
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.log(`  ${skillLabel}: code review failed (${message}), falling back to static`);
-      for (const skillName of groupSkillNames) {
+      for (const skillName of uncachedSkills) {
         const evs = skillEvidence.get(skillName)!;
         skills.push(buildHybridSkill(skillName, evs));
       }
@@ -367,13 +390,12 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
         return priorityB - priorityA;
       });
 
-      // Pre-compute: collect files and check cache for each group
+      // Pre-compute: collect files, build digests, and check cache for each group
       const groupPlans: GroupPlan[] = [];
       const fileContentsCache = new Map<string, string>();
 
       for (const group of sortedGroups) {
         const groupSkillNames = group.skills;
-        const groupCacheKeyName = [...groupSkillNames].sort().join("+");
 
         // Collect unique files for the group, respecting token budget
         const allFileEvidence = new Map<string, Evidence>();
@@ -411,19 +433,32 @@ export async function runInfer(cwd: string, options?: { skipLlm?: boolean; maxRe
           tokenCount += tokens;
         }
 
-        // Check cache using combined key
-        const fileHashes = sortedEvidence
-          .filter((ev) => filesToReview.some((f) => f.path === ev.source))
-          .map((ev) => ev.hash);
-        const cacheKey = computeCacheKey(groupCacheKeyName, fileHashes, PROMPT_VERSION, LLM_MODEL);
-        const cachedGroup = await getCachedGroupReview(cwd, cacheKey);
+        // Build per-skill digests and compute digest hashes
+        const skillDigests = new Map<string, EvidenceDigest>();
+        const skillDigestHashes = new Map<string, string>();
+        for (const skillName of groupSkillNames) {
+          const evs = skillEvidence.get(skillName)!;
+          const staticResult = analyzeStaticQuality(skillName, evs);
+          const digest = buildEvidenceDigest(skillName, evs, staticResult, fileContentsCache);
+          skillDigests.set(skillName, digest);
+          skillDigestHashes.set(skillName, hashDigest(digest));
+        }
+
+        // Group cache key uses sorted per-skill digest hashes
+        const sortedDigestHashes = [...skillDigestHashes.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([, h]) => h);
+        const groupCacheKeyName = [...groupSkillNames].sort().join("+");
+        const groupCacheKey = computeCacheKey(groupCacheKeyName, sortedDigestHashes, PROMPT_VERSION, LLM_MODEL);
+        const cachedGroup = await getCachedGroupReview(cwd, groupCacheKey);
 
         groupPlans.push({
           group,
           filesToReview,
           tokenCount,
-          fileHashes,
-          cacheKey,
+          groupCacheKey,
+          skillDigests,
+          skillDigestHashes,
           cached: !!(cachedGroup && cachedGroup.length > 0),
         });
       }
