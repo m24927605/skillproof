@@ -9,6 +9,12 @@
 - **Confidence:** {{confidence}}
 - **Evidence:** {{evidenceIds}}
 - **Inferred by:** {{inferredBy}}
+{{#strengths}}
+- **Strengths:**
+{{#items}}
+  - {{.}}
+{{/items}}
+{{/strengths}}
 
 {{/skills}}
 
