@@ -68,4 +68,5 @@ export interface Manifest {
   claims: Claim[];
   signatures: Signature[];
   repos?: RepoEntry[];
+  file_hashes?: Record<string, string>;
 }

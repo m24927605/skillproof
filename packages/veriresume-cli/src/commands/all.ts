@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readFile, access } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { runScan } from "./scan.ts";
@@ -11,6 +12,8 @@ import { runVerify } from "./verify.ts";
 import { selectPrompt, ask } from "../core/prompt.ts";
 import { resolveApiKey, readConfig, writeConfig } from "../core/config.ts";
 import { askYesNo } from "../core/prompt.ts";
+import { hashContent } from "../core/hashing.ts";
+import { readManifest, writeManifest, getManifestPath } from "../core/manifest.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -30,8 +33,9 @@ export async function runAll(
   const steps = [
     "Scanning repository",
     "Inferring skills",
-    "Signing manifest",
     "Rendering resume",
+    "Computing file hashes",
+    "Signing manifest",
     "Packing bundle",
     "Verifying bundle",
   ];
@@ -145,11 +149,7 @@ export async function runAll(
       output = path.join(cwd, `resume.${ext}`);
     }
 
-    // Step 3: Sign (before render so verification block shows signature)
-    step("Signing manifest");
-    await runSign(cwd);
-
-    // Step 4: Render
+    // Step 3: Render
     step("Rendering resume");
     const hasCliFlags = !!(options?.locale && options?.format && options?.output);
     const renderOpts: Parameters<typeof runRender>[4] = {
@@ -159,11 +159,31 @@ export async function runAll(
     };
     await runRender(cwd, locale, format, output, renderOpts);
 
-    // Step 5: Pack
+    // Step 4: Compute file hashes and write to manifest (before signing)
+    step("Computing file hashes");
+    const RESUME_FORMATS = ["resume.md", "resume.pdf", "resume.png", "resume.jpg", "resume.jpeg"];
+    const manifestPath = getManifestPath(cwd);
+    const manifest = await readManifest(manifestPath);
+    const fileHashes: Record<string, string> = {};
+    for (const filename of RESUME_FORMATS) {
+      try {
+        await access(path.join(cwd, filename));
+        const content = await readFile(path.join(cwd, filename));
+        fileHashes[filename] = hashContent(content);
+      } catch { /* doesn't exist */ }
+    }
+    manifest.file_hashes = fileHashes;
+    await writeManifest(manifestPath, manifest);
+
+    // Step 5: Sign (after render so file_hashes are covered by signature)
+    step("Signing manifest");
+    await runSign(cwd);
+
+    // Step 6: Pack
     step("Packing bundle");
     await runPack(cwd);
 
-    // Step 6: Verify
+    // Step 7: Verify
     const bundlePath = path.join(cwd, "bundle.zip");
     step("Verifying bundle");
     await runVerify(bundlePath);

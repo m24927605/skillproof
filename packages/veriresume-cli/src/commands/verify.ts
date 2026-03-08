@@ -81,33 +81,24 @@ export async function verifyBundle(bundlePath: string): Promise<VerifyResult> {
 
     const allSigsValid = sigResults.length > 0 && sigResults.every((s) => s.valid);
 
-    // Verify all file hashes from verification.json (not just resume.md)
+    // Verify file hashes from signed manifest (not unsigned verification.json)
     let resumeTampered = false;
     const tamperedFiles: string[] = [];
-    try {
-      const verificationContent = await readFile(
-        path.join(extractDir, "verification.json"), "utf8"
-      );
-      const verification = JSON.parse(verificationContent);
-      const fileHashes: Record<string, string> = verification.file_hashes || {};
+    const fileHashes: Record<string, string> = manifest.file_hashes || {};
 
-      for (const [filename, expectedHash] of Object.entries(fileHashes)) {
-        // Prevent path traversal in filenames from verification.json
-        const safeName = path.basename(filename);
-        try {
-          const content = await readFile(path.join(extractDir, safeName));
-          const actualHash = hashContent(content);
-          if (actualHash !== expectedHash) {
-            tamperedFiles.push(filename);
-            resumeTampered = true;
-          }
-        } catch {
+    for (const [filename, expectedHash] of Object.entries(fileHashes)) {
+      const safeName = path.basename(filename);
+      try {
+        const content = await readFile(path.join(extractDir, safeName));
+        const actualHash = hashContent(content);
+        if (actualHash !== expectedHash) {
           tamperedFiles.push(filename);
           resumeTampered = true;
         }
+      } catch {
+        tamperedFiles.push(filename);
+        resumeTampered = true;
       }
-    } catch {
-      resumeTampered = true;
     }
 
     return {
