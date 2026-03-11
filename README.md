@@ -10,42 +10,33 @@ The result is a `resume.md` where every skill links back to verifiable evidence,
 
 ## Installation
 
-**Note:** Installation differs by platform. Claude Code has a built-in plugin system. You can also use the CLI standalone.
+### Claude Code Plugin (recommended)
 
-### Claude Code (via Plugin Marketplace)
+> **Prerequisites:** [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and working.
 
-In Claude Code, register the marketplace and install in two steps:
+**Step 1.** Add the marketplace — run one of the following:
 
 ```bash
+# Inside Claude Code session:
 /plugin marketplace add m24927605/skillproof-marketplace
-/plugin install skillproof@skillproof-marketplace
+
+# Or from the terminal:
+claude plugin marketplace add https://github.com/m24927605/skillproof-marketplace.git
 ```
 
-Or from the terminal (outside Claude Code):
+**Step 2.** Install the plugin:
 
 ```bash
-claude plugin marketplace add https://github.com/m24927605/skillproof-marketplace.git
+# Inside Claude Code session:
+/plugin install skillproof@skillproof-marketplace
+
+# Or from the terminal:
 claude plugin install skillproof@skillproof-marketplace --scope user
 ```
 
-Then restart your Claude Code session. Type `/skillproof` to see all available commands.
+**Step 3.** Restart your Claude Code session.
 
-### Claude Code (manual / local development)
-
-Clone both repos and register the marketplace locally:
-
-```bash
-git clone https://github.com/m24927605/skillproof.git
-cd skillproof/packages/skillproof
-npm install && npm run build
-```
-
-Then in Claude Code:
-
-```bash
-/plugin marketplace add /path/to/skillproof-marketplace
-/plugin install skillproof@skillproof-marketplace
-```
+**Step 4.** Verify — type `/skillproof` and you should see all 7 commands in the autocomplete menu. Navigate to any git repository and run `/skillproof-scan` to test.
 
 ### Standalone CLI (npm)
 
@@ -72,10 +63,6 @@ cd skillproof/packages/skillproof
 npm install && npm run build
 npx skillproof doctor
 ```
-
-### Verify Installation
-
-Start a new Claude Code session in a git repository and run `/skillproof-scan`. You should see evidence being extracted from your repo.
 
 ## Prerequisites
 
