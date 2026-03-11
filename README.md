@@ -14,21 +14,25 @@ The result is a `resume.md` where every skill links back to verifiable evidence,
 
 ### Claude Code (via Plugin Marketplace)
 
-In Claude Code, register the marketplace first:
+In Claude Code, register the marketplace and install in two steps:
 
 ```bash
 /plugin marketplace add m24927605/skillproof-marketplace
-```
-
-Then install the plugin:
-
-```bash
 /plugin install skillproof@skillproof-marketplace
 ```
 
-### Claude Code (manual)
+Or from the terminal (outside Claude Code):
 
-Clone the repo and install as a local plugin:
+```bash
+claude plugin marketplace add https://github.com/m24927605/skillproof-marketplace.git
+claude plugin install skillproof@skillproof-marketplace --scope user
+```
+
+Then restart your Claude Code session. Type `/skillproof` to see all available commands.
+
+### Claude Code (manual / local development)
+
+Clone both repos and register the marketplace locally:
 
 ```bash
 git clone https://github.com/m24927605/skillproof.git
@@ -36,10 +40,11 @@ cd skillproof/packages/skillproof
 npm install && npm run build
 ```
 
-Then in Claude Code, add the plugin from the cloned directory:
+Then in Claude Code:
 
 ```bash
-/plugin add /path/to/skillproof
+/plugin marketplace add /path/to/skillproof-marketplace
+/plugin install skillproof@skillproof-marketplace
 ```
 
 ### Standalone CLI (npm)
@@ -225,7 +230,7 @@ npm test
 ## Updating
 
 ```bash
-/plugin update skillproof
+/plugin update skillproof@skillproof-marketplace
 ```
 
 ## Contributing
