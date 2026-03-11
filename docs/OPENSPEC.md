@@ -142,7 +142,7 @@ skillproof-claude-plugin/
   plugin.json
 
 skills/
-  resume/
+  all/
     SKILL.md
     templates/
       resume.modern.md
@@ -155,18 +155,37 @@ packages/
       index.ts
       commands/
         scan.ts
+        scan-multi.ts
         infer.ts
         render.ts
         sign.ts
         pack.ts
         verify.ts
+        doctor.ts
+        all.ts
       core/
         manifest.ts
         evidence.ts
+        evidence-digest.ts
         skills.ts
+        skill-grouping.ts
+        static-quality.ts
         git.ts
+        github.ts
         hashing.ts
         security.ts
+        identity.ts
+        llm.ts
+        code-review.ts
+        review-cache.ts
+        review-gate.ts
+        token-estimate.ts
+        verification.ts
+        browser.ts
+        export.ts
+        config.ts
+        merge.ts
+        prompt.ts
       types/
         manifest.ts
 
@@ -211,10 +230,10 @@ Example:
 Skill logic is defined in:
 
 ```
-skills/resume/SKILL.md
+skills/all/SKILL.md
 ```
 
-The skill defines procedures used by slash commands.
+The skill defines procedures for the full pipeline and individual steps.
 
 ---
 

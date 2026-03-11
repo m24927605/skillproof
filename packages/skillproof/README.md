@@ -188,7 +188,7 @@ SkillProof can also be used as a Claude Code plugin with slash commands:
 /plugin install skillproof@skillproof-marketplace
 
 # Use
-skillproof:resume
+skillproof:all
 ```
 
 ## License

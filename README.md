@@ -181,7 +181,7 @@ TypeScript CLI (skillproof)
 ```
 skillproof/
 ├── .claude-plugin/plugin.json        # Plugin metadata
-├── skills/resume/
+├── skills/all/
 │   ├── SKILL.md                      # Skill procedures
 │   └── templates/resume.modern.md    # Resume template
 ├── packages/skillproof/
