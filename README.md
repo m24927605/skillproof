@@ -4,7 +4,7 @@ SkillProof is a Claude Code plugin that generates **verifiable developer resumes
 
 ## How it works
 
-Navigate to any git repository and run `/skillproof-all`. SkillProof scans your commits, dependencies, and config files to build an evidence graph. It then infers your skills using 20+ static signal rules plus Claude's reasoning for deeper analysis (architecture patterns, testing practices, code quality).
+Navigate to any git repository and invoke the `skillproof:all` skill. SkillProof scans your commits, dependencies, and config files to build an evidence graph. It then infers your skills using 20+ static signal rules plus Claude's reasoning for deeper analysis (architecture patterns, testing practices, code quality).
 
 The result is a `resume.md` where every skill links back to verifiable evidence, plus a signed `bundle.zip` that anyone can independently verify hasn't been tampered with.
 
@@ -36,7 +36,7 @@ claude plugin install skillproof@skillproof-marketplace --scope user
 
 **Step 3.** Restart your Claude Code session.
 
-**Step 4.** Verify — type `/skillproof` and you should see all 7 commands in the autocomplete menu. Navigate to any git repository and run `/skillproof-scan` to test.
+**Step 4.** Verify — invoke the `skillproof:all` skill in any git repository. The skill contains all procedures (scan, infer, render, sign, pack, verify, all).
 
 ### Standalone CLI (npm)
 
@@ -84,19 +84,19 @@ npx skillproof doctor
 
 ## The Pipeline
 
-Run `skillproof all` (CLI) or `/skillproof-all` (Claude Code plugin) to execute the full pipeline, or run each step individually:
+Run `skillproof all` (CLI) or invoke the `skillproof:all` skill (Claude Code plugin) to execute the full pipeline, or run each step individually:
 
-1. **`/skillproof-scan`** — Scans your git history, files, dependencies, and config. Builds an evidence graph and writes the manifest to `.skillproof/resume-manifest.json`.
+1. **scan** — Scans your git history, files, dependencies, and config. Builds an evidence graph and writes the manifest to `.skillproof/resume-manifest.json`.
 
-2. **`/skillproof-infer`** — Infers skills from evidence using hybrid analysis. All skills receive a deterministic `static_confidence` score. A review gating policy selects high-value or uncertain skills for Claude code review; the rest are scored statically. Reviewed skills get a blended confidence (35% static + 65% LLM). `--dry-run` shows the review/skip split and cost estimate without making API calls.
+2. **infer** — Infers skills from evidence using hybrid analysis. All skills receive a deterministic `static_confidence` score. A review gating policy selects high-value or uncertain skills for Claude code review; the rest are scored statically. Reviewed skills get a blended confidence (35% static + 65% LLM). `--dry-run` shows the review/skip split and cost estimate without making API calls.
 
-3. **`/skillproof-render`** — Generates `resume.md` from the manifest. Skills sorted by confidence, each linked to evidence entries.
+3. **render** — Generates `resume.md` from the manifest. Skills sorted by confidence, each linked to evidence entries.
 
-4. **`/skillproof-sign`** — Signs the manifest with a locally generated Ed25519 key pair. Automatically computes `file_hashes` for all resume files (md, pdf, png, jpg) and includes them in the signed manifest for tamper detection. **Must run after render** so file hashes cover all output formats.
+4. **sign** — Signs the manifest with a locally generated Ed25519 key pair. Automatically computes `file_hashes` for all resume files (md, pdf, png, jpg) and includes them in the signed manifest for tamper detection. **Must run after render** so file hashes cover all output formats.
 
-5. **`/skillproof-pack`** — Creates `bundle.zip` containing resume, manifest, signatures, and verification metadata.
+5. **pack** — Creates `bundle.zip` containing resume, manifest, signatures, and verification metadata.
 
-6. **`/skillproof-verify`** — Verifies a bundle's cryptographic signatures and file integrity. Uses signed `manifest.file_hashes` (not unsigned `verification.json`) for tamper detection. Reports INVALID if `file_hashes` is missing but resume files exist.
+6. **verify** — Verifies a bundle's cryptographic signatures and file integrity. Uses signed `manifest.file_hashes` (not unsigned `verification.json`) for tamper detection. Reports INVALID if `file_hashes` is missing but resume files exist.
 
 ## What's Inside
 
@@ -172,7 +172,7 @@ TypeScript CLI (skillproof)
 .skillproof/resume-manifest.json
 ```
 
-- **Plugin layer** — Slash commands invoke the skill, which orchestrates the CLI and adds LLM reasoning
+- **Plugin layer** — The `skillproof:all` skill orchestrates the CLI and adds LLM reasoning
 - **CLI** — Handles deterministic operations: git parsing, hashing, signing, bundling
 - **Manifest** — Single source of truth for all evidence, skills, claims, and signatures
 
@@ -181,14 +181,6 @@ TypeScript CLI (skillproof)
 ```
 skillproof/
 ├── .claude-plugin/plugin.json        # Plugin metadata
-├── commands/                          # Slash commands (skillproof-*)
-│   ├── skillproof-scan.md
-│   ├── skillproof-infer.md
-│   ├── skillproof-render.md
-│   ├── skillproof-sign.md
-│   ├── skillproof-pack.md
-│   ├── skillproof-verify.md
-│   └── skillproof-all.md
 ├── skills/resume/
 │   ├── SKILL.md                      # Skill procedures
 │   └── templates/resume.modern.md    # Resume template

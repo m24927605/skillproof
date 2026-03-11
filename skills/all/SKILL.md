@@ -1,4 +1,4 @@
-name: resume
+name: all
 description: Generate verifiable developer resumes from source code repositories
 
 ---
@@ -9,7 +9,96 @@ description: Generate verifiable developer resumes from source code repositories
 - `node` >= 22 installed (for Ed25519 crypto)
 - `gh` installed and authenticated (optional, for GitHub PR evidence)
 
-The `skillproof-all` procedure calls the local `skillproof` Node.js package for non-interactive pipeline execution. Claude Code handles user interaction and invokes the CLI with appropriate flags.
+## Default Behavior
+
+When this skill is invoked without specifying a procedure, run the full pipeline using a two-phase approach: Claude Code handles user interaction via AskUserQuestion, then calls the CLI in non-interactive mode with flags.
+
+---
+
+**⛔ FORBIDDEN BEHAVIORS — VIOLATION OF THESE IS A CRITICAL ERROR:**
+
+1. Do NOT classify, group, or categorize repositories (e.g., "DeFi/Blockchain", "Backend focused"). This is STRICTLY FORBIDDEN.
+2. Do NOT create summary options like "Select by category".
+3. Do NOT use your own judgment to organize or filter the repo list.
+4. Do NOT truncate or omit repos from the list — show ALL of them.
+
+**❌ WRONG — never do this:**
+```
+1. DeFi/Blockchain focused (compound-protocol, cream-backend, ...)
+2. Backend focused (alien-backend, ...)
+3. Type something
+```
+
+**✅ CORRECT — always do this:**
+First, output the full numbered list as plain text so the user can see ALL repos at once:
+```
+Found 30 repositories:
+ 1. AIFT_Vulcan_interview
+ 2. alien-backend
+ 3. bobaoppa-api
+ 4. bold
+ 5. compound-protocol
+ ...
+30. usdy-stats
+```
+Then use AskUserQuestion to ask: "Which repos to include? Enter numbers, ranges, or 'all'. Example: 1,3,5-10,15"
+
+The user can type:
+- `all` — include every repo
+- `1,3,5` — specific repos by number
+- `1-10,15,20-25` — ranges and individual numbers mixed
+- Repo names directly (e.g. `alien-backend,bold`)
+
+---
+
+**Phase 1: Gather user choices via AskUserQuestion**
+
+1. Ask scan mode (present choices: "Current project only", "Multiple local projects", "GitHub remote repos").
+
+2. If "Multiple local projects":
+   a. Ask for the parent directory path (default: current directory).
+   b. Discover repos by running:
+      ```bash
+      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts list-repos --path "<parent_dir>"
+      ```
+      This outputs a JSON array of repo names.
+   c. Output the COMPLETE numbered list of repos as plain text (sorted alphabetically, one per line). Then use AskUserQuestion to ask which repos to include. The user types numbers, ranges (e.g. `1,3,5-10`), repo names, or `all`.
+   d. Collect emails by running the CLI command (do NOT use `git config` — it misses committer emails):
+      ```bash
+      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts list-emails --path "<parent_dir>" --repos "<repo1>,<repo2>,..."
+      ```
+      This outputs a JSON array of all unique emails (author + committer) from git log. Present all emails to the user to confirm which are theirs.
+
+3. If "Current project only": no extra input needed.
+
+4. Ask locale (e.g., en-US, zh-TW), format (md/pdf/png/jpeg), and output path.
+
+**Phase 2: Execute CLI in non-interactive mode**
+
+Run the CLI with all flags so it skips all interactive prompts:
+
+For current project:
+```bash
+node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts all \
+  --scan-mode current \
+  --locale "<locale>" --format "<format>" -o "<output>" \
+  --max-review-tokens 200000 --yes
+```
+
+For multiple local projects:
+```bash
+node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts all \
+  --scan-mode local-multi \
+  --parent-dir "<parent_dir>" \
+  --repos "<repo1>,<repo2>,<repo3>" \
+  --emails "<email1>,<email2>" \
+  --locale "<locale>" --format "<format>" -o "<output>" \
+  --max-review-tokens 200000 --yes
+```
+
+**IMPORTANT:**
+- Do NOT run the CLI without flags — it will hang waiting for interactive input.
+- Do NOT skip Phase 1 — always ask the user first.
 
 ## Data Locations
 
@@ -246,7 +335,7 @@ Generate a professional resume from the manifest.
 
      </details>
      ```
-   - If `signatures` is empty, replace the `<details>` block with: `> ⚠️ Unsigned — run /skillproof-sign first to add cryptographic proof.`
+   - If `signatures` is empty, replace the `<details>` block with: `> ⚠️ Unsigned — run the skillproof-sign procedure first to add cryptographic proof.`
 
 6. **Ask output format:** Use AskUserQuestion to present a selection list (do NOT ask the user to type):
    - md (default)
@@ -331,94 +420,3 @@ Verify a bundle's authenticity.
    - Reports tampered files and missing hash coverage
 
 2. **Report** verification results to user.
-
-### skillproof-all
-
-Run the full pipeline using a two-phase approach: Claude Code handles user interaction via AskUserQuestion, then calls the CLI in non-interactive mode with flags.
-
----
-
-**⛔ FORBIDDEN BEHAVIORS — VIOLATION OF THESE IS A CRITICAL ERROR:**
-
-1. Do NOT classify, group, or categorize repositories (e.g., "DeFi/Blockchain", "Backend focused"). This is STRICTLY FORBIDDEN.
-2. Do NOT create summary options like "Select by category".
-3. Do NOT use your own judgment to organize or filter the repo list.
-4. Do NOT truncate or omit repos from the list — show ALL of them.
-
-**❌ WRONG — never do this:**
-```
-1. DeFi/Blockchain focused (compound-protocol, cream-backend, ...)
-2. Backend focused (alien-backend, ...)
-3. Type something
-```
-
-**✅ CORRECT — always do this:**
-First, output the full numbered list as plain text so the user can see ALL repos at once:
-```
-Found 30 repositories:
- 1. AIFT_Vulcan_interview
- 2. alien-backend
- 3. bobaoppa-api
- 4. bold
- 5. compound-protocol
- ...
-30. usdy-stats
-```
-Then use AskUserQuestion to ask: "Which repos to include? Enter numbers, ranges, or 'all'. Example: 1,3,5-10,15"
-
-The user can type:
-- `all` — include every repo
-- `1,3,5` — specific repos by number
-- `1-10,15,20-25` — ranges and individual numbers mixed
-- Repo names directly (e.g. `alien-backend,bold`)
-
----
-
-**Phase 1: Gather user choices via AskUserQuestion**
-
-1. Ask scan mode (present choices: "Current project only", "Multiple local projects", "GitHub remote repos").
-
-2. If "Multiple local projects":
-   a. Ask for the parent directory path (default: current directory).
-   b. Discover repos by running:
-      ```bash
-      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts list-repos --path "<parent_dir>"
-      ```
-      This outputs a JSON array of repo names.
-   c. Output the COMPLETE numbered list of repos as plain text (sorted alphabetically, one per line). Then use AskUserQuestion to ask which repos to include. The user types numbers, ranges (e.g. `1,3,5-10`), repo names, or `all`.
-   d. Collect emails by running the CLI command (do NOT use `git config` — it misses committer emails):
-      ```bash
-      node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts list-emails --path "<parent_dir>" --repos "<repo1>,<repo2>,..."
-      ```
-      This outputs a JSON array of all unique emails (author + committer) from git log. Present all emails to the user to confirm which are theirs.
-
-3. If "Current project only": no extra input needed.
-
-4. Ask locale (e.g., en-US, zh-TW), format (md/pdf/png/jpeg), and output path.
-
-**Phase 2: Execute CLI in non-interactive mode**
-
-Run the CLI with all flags so it skips all interactive prompts:
-
-For current project:
-```bash
-node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts all \
-  --scan-mode current \
-  --locale "<locale>" --format "<format>" -o "<output>" \
-  --max-review-tokens 200000 --yes
-```
-
-For multiple local projects:
-```bash
-node --experimental-strip-types /Users/sin-chengchen/github.com/skillproof/packages/skillproof/src/index.ts all \
-  --scan-mode local-multi \
-  --parent-dir "<parent_dir>" \
-  --repos "<repo1>,<repo2>,<repo3>" \
-  --emails "<email1>,<email2>" \
-  --locale "<locale>" --format "<format>" -o "<output>" \
-  --max-review-tokens 200000 --yes
-```
-
-**IMPORTANT:**
-- Do NOT run the CLI without flags — it will hang waiting for interactive input.
-- Do NOT skip Phase 1 — always ask the user first.

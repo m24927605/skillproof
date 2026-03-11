@@ -141,15 +141,6 @@ skillproof-claude-plugin/
 .claude-plugin/
   plugin.json
 
-commands/
-  skillproof-scan.md
-  skillproof-infer.md
-  skillproof-render.md
-  skillproof-sign.md
-  skillproof-pack.md
-  skillproof-verify.md
-  skillproof-all.md
-
 skills/
   resume/
     SKILL.md
@@ -215,103 +206,7 @@ Example:
 
 ---
 
-# 6. Claude Slash Commands
-
-Commands are located in:
-
-```
-commands/
-```
-
----
-
-## /skillproof-scan
-
-Purpose:
-
-Scan the repository and generate evidence.
-
-Command file:
-
-```
-commands/skillproof-scan.md
-```
-
-Content:
-
-```
-description disable-model-invocation
-
-Scan repository and generate evidence graph.
-
-true
-
-Invoke the skillproof:resume skill and follow the "skillproof-scan" procedure exactly as presented to you
-```
-
----
-
-## /skillproof-infer
-
-Infer skills from evidence.
-
-```
-commands/skillproof-infer.md
-```
-
----
-
-## /skillproof-render
-
-Generate resume markdown.
-
-```
-commands/skillproof-render.md
-```
-
----
-
-## /skillproof-sign
-
-Sign resume manifest.
-
-```
-commands/skillproof-sign.md
-```
-
----
-
-## /skillproof-pack
-
-Create distributable resume bundle.
-
-```
-commands/skillproof-pack.md
-```
-
----
-
-## /skillproof-verify
-
-Verify resume bundle authenticity.
-
-```
-commands/skillproof-verify.md
-```
-
----
-
-## /skillproof-all
-
-Run the entire pipeline.
-
-```
-commands/skillproof-all.md
-```
-
----
-
-# 7. Skill Definition
+# 6. Skill Definition
 
 Skill logic is defined in:
 
@@ -323,7 +218,7 @@ The skill defines procedures used by slash commands.
 
 ---
 
-# 8. CLI Tool
+# 7. CLI Tool
 
 A local CLI tool called:
 
@@ -348,7 +243,7 @@ skillproof verify
 
 ---
 
-# 9. Manifest Schema
+# 8. Manifest Schema
 
 File:
 
@@ -373,7 +268,7 @@ Example:
 
 ---
 
-# 10. Evidence Model
+# 9. Evidence Model
 
 Evidence types:
 
@@ -405,7 +300,7 @@ timestamp
 
 ---
 
-# 11. Skill Inference
+# 10. Skill Inference
 
 Skills are inferred from repository signals.
 
@@ -440,7 +335,7 @@ evidence_ids
 
 ---
 
-# 12. Resume Generation
+# 11. Resume Generation
 
 Output file:
 
@@ -464,7 +359,7 @@ evidence: EV-FILE-serverless
 
 ---
 
-# 13. Resume Bundle
+# 12. Resume Bundle
 
 Output:
 
@@ -485,7 +380,7 @@ verification.json (informational — not used for integrity verification)
 
 ---
 
-# 14. Multi-Signature System
+# 13. Multi-Signature System
 
 Supported signatures:
 
@@ -507,7 +402,7 @@ Optional third-party attestation.
 
 ---
 
-# 15. Security Requirements
+# 14. Security Requirements
 
 The system must enforce:
 
@@ -529,7 +424,7 @@ Must never be exposed.
 
 ---
 
-# 16. Implementation Requirements
+# 15. Implementation Requirements
 
 Claude Code must implement:
 
@@ -545,7 +440,7 @@ Claude Code must implement:
 
 ---
 
-# 17. Acceptance Criteria
+# 16. Acceptance Criteria
 
 Running the command:
 
@@ -565,7 +460,7 @@ Each skill must reference evidence entries.
 
 ---
 
-# 18. Future Extensions
+# 17. Future Extensions
 
 Possible future features:
 
